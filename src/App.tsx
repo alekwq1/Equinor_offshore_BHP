@@ -3,7 +3,6 @@ import {
   Environment,
   OrbitControls,
   PerformanceMonitor,
-  useProgress,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Splat } from "./splat-object"; // Ensure this component exists
@@ -15,7 +14,11 @@ const urls = [
   "https://huggingface.co/datasets/Alekso/Equinor_Base_20240604/resolve/main/EQUINOR_20240604.splat",
 ];
 
-const LoadingScreen = ({ progress }) => (
+interface LoadingScreenProps {
+  progress: number;
+}
+
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress }) => (
   <div
     className={`loading-screen ${
       progress < 100 ? "" : "loading-screen--hidden"
@@ -61,7 +64,7 @@ function App() {
       const reader = response.body?.getReader();
       const contentLength = response.headers.get("content-length");
       let receivedLength = 0;
-      let chunks: Uint8Array[] = [];
+      const chunks: Uint8Array[] = [];
 
       if (!contentLength) {
         console.warn("Nie można odczytać długości pliku!");
@@ -70,7 +73,7 @@ function App() {
 
       const totalLength = parseInt(contentLength, 10);
 
-      while (true) {
+      while (receivedLength < totalLength) {
         const { done, value } = (await reader?.read()) ?? {};
         if (done) break;
         if (value) {
