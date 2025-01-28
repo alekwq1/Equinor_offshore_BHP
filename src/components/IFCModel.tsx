@@ -7,6 +7,7 @@ export interface IFCProps {
   Name?: string;
   Description?: string;
   onPropertiesSelected?: (props: IFCProps | null) => void;
+  rotationY?: number; // Nowy parametr
 }
 
 const IFCModel: React.FC<IFCProps> = ({ onPropertiesSelected }) => {
@@ -22,8 +23,10 @@ const IFCModel: React.FC<IFCProps> = ({ onPropertiesSelected }) => {
     ifcLoader.load(
       "/model.ifc",
       (model) => {
-        model.scale.set(0.1, 0.1, 0.1);
-        model.position.set(-6, -1.5, 2);
+        model.scale.set(1, 1, 1);
+        model.position.set(18.5, -50.4, 120);
+        // Dodaj obrót o 55 stopni w osi X
+        model.rotation.y = THREE.MathUtils.degToRad(95);
         scene.add(model);
         modelRef.current = model;
       },

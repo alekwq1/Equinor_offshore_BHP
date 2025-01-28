@@ -3,6 +3,7 @@ import {
   Environment,
   OrbitControls,
   PerformanceMonitor,
+  TransformControls,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Splat } from "./splat-object";
@@ -39,16 +40,34 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress }) => (
 );
 
 function App() {
-  const { url, throttleDpr, maxDpr, throttleSplats, maxSplats } = useControls({
-    url: { label: "Model URL", options: urls },
-    throttleDpr: { label: "Degrade pixel ratio based on perf.", value: false },
-    maxDpr: { label: "Max pixel ratio", value: window?.devicePixelRatio ?? 1 },
-    throttleSplats: {
-      label: "Degrade splat count based on perf.",
-      value: false,
-    },
-    maxSplats: { label: "Max splat count", value: 10000000 },
-  });
+  const [isTransforming, setIsTransforming] = useState(false);
+  const { url, throttleDpr, maxDpr, throttleSplats, maxSplats, transformMode } =
+    useControls({
+      url: { label: "Model URL", options: urls },
+      throttleDpr: {
+        label: "Degrade pixel ratio based on perf.",
+        value: false,
+      },
+      maxDpr: {
+        label: "Max pixel ratio",
+        value: window?.devicePixelRatio ?? 1,
+      },
+      throttleSplats: {
+        label: "Degrade splat count based on perf.",
+        value: false,
+      },
+      maxSplats: { label: "Max splat count", value: 10000000 },
+      transformMode: {
+        // dodaj tę nową właściwość
+        label: "Tryb transformacji",
+        options: {
+          Przesuń: "translate",
+          Obróć: "rotate",
+          Skaluj: "scale",
+        },
+        value: "translate", // wartość domyślna
+      },
+    });
 
   const [hasStarted, setHasStarted] = useState(false);
   const [factor, setFactor] = useState(1);
@@ -61,12 +80,21 @@ function App() {
 
   const [progress, setProgress] = useState(0);
   const [loadedData, setLoadedData] = useState<Blob | null>(null);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [ifcProperties, setIfcProperties] = useState<IFCProps | null>(null);
   const axesRef = useRef<THREE.AxesHelper | null>(null);
 
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (loadedData) {
+      const url = URL.createObjectURL(loadedData);
+      setObjectUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [loadedData]);
 
   const openVideoModal = () => setIsVideoOpen(true);
   const closeVideoModal = () => setIsVideoOpen(false);
@@ -102,7 +130,8 @@ function App() {
         }
       }
 
-      setLoadedData(new Blob(chunks));
+      const blob = new Blob(chunks);
+      setLoadedData(blob);
     };
 
     downloadFile();
@@ -158,7 +187,7 @@ function App() {
         className="h-full w-full bg-black"
         gl={{ antialias: false }}
         dpr={effectiveDpr}
-        camera={{ position: [7, 8, 2.5], fov: 40 }}
+        camera={{ position: [150, 150, 32], fov: 40 }}
       >
         <ambientLight intensity={0.8} />
         <PerformanceMonitor
@@ -185,12 +214,18 @@ function App() {
           }}
         />
         <OrbitControls
-          target={[0, -2, 3]}
-          minDistance={3}
-          maxDistance={13}
+          enabled={!isTransforming}
+          target={[0, -25, 45]}
+          minDistance={35}
+          maxDistance={220}
           minPolarAngle={Math.PI / 20}
           maxPolarAngle={Math.PI / 3}
           enablePan={true}
+          // Dodaj te nowe właściwości
+          rotateSpeed={0.6} // Kontroluje prędkość obracania (domyślnie 1)
+          enableDamping={false} // Wyłącza płynne wygaszanie ruchu
+          dampingFactor={0} // Całkowicie wyłącza efekt bezwładności
+          autoRotate={false} // Wyłącza automatyczne obracanie
           onChange={(e) => {
             if (e && axesRef.current) {
               const { x, y, z } = e.target.target;
@@ -199,12 +234,9 @@ function App() {
           }}
         />
         <Suspense fallback={null}>
-          {loadedData ? (
-            <group position={[0, 0, 0]} scale={[10, 10, 10]}>
-              <Splat
-                url={URL.createObjectURL(loadedData)}
-                maxSplats={effectiveSplats}
-              />
+          {objectUrl ? (
+            <group position={[0, 0, 0]} scale={[270, 270, 270]}>
+              <Splat url={objectUrl} maxSplats={effectiveSplats} />
             </group>
           ) : (
             <mesh position={[10, 1, 5]}>
@@ -213,6 +245,27 @@ function App() {
             </mesh>
           )}
           <IFCModel onPropertiesSelected={setIfcProperties} />
+
+          <TransformControls
+            mode={transformMode as "translate" | "rotate" | "scale"}
+            space="world"
+            onMouseDown={() => setIsTransforming(true)}
+            onMouseUp={() => setIsTransforming(false)}
+          >
+            <group position={[0, 0, 0]}>
+              <mesh scale={[1, 1, 1]}>
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial
+                  color="orange"
+                  transparent
+                  opacity={0.7}
+                  wireframe={false}
+                />
+              </mesh>
+              <axesHelper args={[1.5]} />
+            </group>
+          </TransformControls>
+
           <Environment preset="city" />
         </Suspense>
       </Canvas>
