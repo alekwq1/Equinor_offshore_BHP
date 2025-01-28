@@ -1,14 +1,18 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useRef, useEffect } from "react";
 import {
   Environment,
   OrbitControls,
   PerformanceMonitor,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { Splat } from "./splat-object"; // Ensure this component exists
+import { Splat } from "./splat-object";
 import { Leva, useControls } from "leva";
-import { useState, useRef, useEffect } from "react";
 import * as THREE from "three";
+import VideoModal from "./components/VideoModal.tsx";
+import HelpModal from "./components/HelpModal.tsx";
+import SettingsModal from "./components/SettingsModal.tsx";
+import StartExploringButton from "./components/StartExploringButton.tsx";
+import IFCModel, { type IFCProps } from "./components/IFCModel.tsx";
 
 const urls = [
   "https://huggingface.co/datasets/Alekso/Equinor_Base_20240604/resolve/main/EQUINOR_20240604.splat",
@@ -46,6 +50,7 @@ function App() {
     maxSplats: { label: "Max splat count", value: 10000000 },
   });
 
+  const [hasStarted, setHasStarted] = useState(false);
   const [factor, setFactor] = useState(1);
   const dpr = Math.min(maxDpr, Math.round(0.5 + 1.5 * factor));
   const effectiveDpr = throttleDpr ? Math.min(maxDpr, dpr) : maxDpr;
@@ -56,7 +61,21 @@ function App() {
 
   const [progress, setProgress] = useState(0);
   const [loadedData, setLoadedData] = useState<Blob | null>(null);
+  const [ifcProperties, setIfcProperties] = useState<IFCProps | null>(null);
   const axesRef = useRef<THREE.AxesHelper | null>(null);
+
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const openVideoModal = () => setIsVideoOpen(true);
+  const closeVideoModal = () => setIsVideoOpen(false);
+
+  const openHelpModal = () => setIsHelpOpen(true);
+  const closeHelpModal = () => setIsHelpOpen(false);
+
+  const openSettingsModal = () => setIsSettingsOpen(true);
+  const closeSettingsModal = () => setIsSettingsOpen(false);
 
   useEffect(() => {
     const downloadFile = async () => {
@@ -93,12 +112,55 @@ function App() {
     <>
       <Leva oneLineLabels collapsed />
       <LoadingScreen progress={progress} />
+
+      {progress >= 100 && !hasStarted && (
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <StartExploringButton
+            onClick={() => {
+              console.log("Start Exploring clicked!");
+              setHasStarted(true);
+            }}
+          />
+        </div>
+      )}
+
+      <div className="absolute top-4 left-4 flex space-x-2 z-[999]">
+        <button
+          onClick={openVideoModal}
+          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+        >
+          VIDEO
+        </button>
+        <button
+          onClick={openHelpModal}
+          className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+        >
+          HELP
+        </button>
+        <button
+          onClick={openSettingsModal}
+          className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
+        >
+          SETTINGS
+        </button>
+      </div>
+
+      {isVideoOpen && (
+        <VideoModal
+          onClose={closeVideoModal}
+          youtubeUrl="https://www.youtube.com/embed/PrSc-xK2gLE"
+        />
+      )}
+      {isHelpOpen && <HelpModal onClose={closeHelpModal} />}
+      {isSettingsOpen && <SettingsModal onClose={closeSettingsModal} />}
+
       <Canvas
         className="h-full w-full bg-black"
         gl={{ antialias: false }}
         dpr={effectiveDpr}
         camera={{ position: [7, 8, 2.5], fov: 40 }}
       >
+        <ambientLight intensity={0.8} />
         <PerformanceMonitor
           ms={250}
           iterations={1}
@@ -124,11 +186,11 @@ function App() {
         />
         <OrbitControls
           target={[0, -2, 3]}
-          minDistance={8}
+          minDistance={3}
           maxDistance={13}
           minPolarAngle={Math.PI / 20}
           maxPolarAngle={Math.PI / 3}
-          enablePan={false}
+          enablePan={true}
           onChange={(e) => {
             if (e && axesRef.current) {
               const { x, y, z } = e.target.target;
@@ -150,9 +212,25 @@ function App() {
               <meshStandardMaterial color="red" />
             </mesh>
           )}
+          <IFCModel onPropertiesSelected={setIfcProperties} />
           <Environment preset="city" />
         </Suspense>
       </Canvas>
+
+      {ifcProperties && (
+        <div className="absolute top-4 right-4 p-4 bg-white shadow-lg rounded-lg max-w-xs max-h-60 overflow-auto">
+          <h2 className="font-bold text-lg mb-2">Właściwości IFC</h2>
+          <div className="text-sm space-y-1">
+            {Object.entries(ifcProperties).map(([key, value]) => (
+              <div key={key}>
+                <span className="font-semibold">{key}:</span>{" "}
+                {String((value as { value?: unknown })?.value)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="absolute bottom-0 left-0 rounded-lg bg-white shadow border-gray-200 p-2 m-4">
         {factor < 1.0 && (throttleSplats || throttleDpr) && (
           <div className="text-red-500">
