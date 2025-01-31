@@ -11,11 +11,29 @@ import { Leva, useControls } from "leva";
 import VideoModal from "./components/VideoModal.tsx";
 import HelpModal from "./components/HelpModal.tsx";
 import SettingsModal from "./components/SettingsModal.tsx";
-import IFCModel, { type IFCProps } from "./components/IFCModel.tsx";
+import IFCModel, { type IFCElementProperties } from "./components/IFCModel.tsx";
 
-const urls = [
-  "https://huggingface.co/datasets/Alekso/Equinor_Base_20240604/resolve/main/EQUINOR_20240604.splat",
-  "https://huggingface.co/Alekso/Equinor29012025/resolve/main/Equinor_29_01_2025.splat",
+const degToRad = (deg: number) => (deg * Math.PI) / 180;
+
+const splatOptions = [
+  {
+    name: "29.01.2025",
+    url: "https://huggingface.co/Alekso/Equinor29012025/resolve/main/Equinor_29_01_2025.splat",
+    position: [-27, -33, 87] as [number, number, number],
+    rotation: [degToRad(-8), degToRad(-54), degToRad(-5)] as [
+      number,
+      number,
+      number
+    ],
+    scale: [23.8, 23.8, 23.8] as [number, number, number],
+  },
+  {
+    name: "04.06.2024",
+    url: "https://huggingface.co/datasets/Alekso/Equinor_Base_20240604/resolve/main/EQUINOR_20240604.splat",
+    position: [0, 101, 0] as [number, number, number],
+    rotation: [0, 0, 0] as [number, number, number],
+    scale: [270, 270, 270] as [number, number, number],
+  },
 ];
 
 interface LoadingScreenProps {
@@ -52,7 +70,6 @@ const LandingPage: React.FC<{
   onOpenSettings: () => void;
 }> = ({ onStart, onOpenVideo, onOpenHelp, onOpenSettings }) => (
   <div className="fixed inset-0 z-50">
-    {/* Warstwy tła - dodajemy pointer-events-none */}
     <div className="absolute inset-0 bg-gradient-to-b from-black/90 to-black/30 pointer-events-none">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1580927752452-89d86da3fa0a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center opacity-90 pointer-events-none" />
     </div>
@@ -77,43 +94,9 @@ const LandingPage: React.FC<{
         >
           Settings
         </button>
-
-        <div className="fixed bottom-4 left-4 z-50 flex gap-4">
-          <a
-            href="https://www.instagram.com/equinor/?hl=en"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-blue-400 transition-colors"
-          >
-            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-            </svg>
-          </a>
-          <a
-            href="https://x.com/Equinor"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-blue-400 transition-colors"
-          >
-            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-              <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-            </svg>
-          </a>
-          <a
-            href="https://www.facebook.com/Equinor/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-blue-400 transition-colors"
-          >
-            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-            </svg>
-          </a>
-        </div>
       </div>
     </nav>
 
-    {/* Główna zawartość - zmniejszamy z-index */}
     <div className="absolute inset-0 flex flex-col items-center text-center px-4 z-30">
       <h1 className="text-4xl md:text-4xl font-bold text-white leading-tight mt-8">
         Discover the Future of Energy Infrastructure
@@ -140,7 +123,6 @@ const LandingPage: React.FC<{
       </p>
     </div>
 
-    {/* Przyciski na dole - dodajemy z-50 i poprawiamy linki */}
     <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-8 z-50">
       {[
         {
@@ -178,18 +160,36 @@ function App() {
   const [isTransforming, setIsTransforming] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [loadedData, setLoadedData] = useState<Blob | null>(null);
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [ifcProperties, setIfcProperties] = useState<IFCProps | null>(null);
+  const [isSplatLoading, setIsSplatLoading] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [loadedData, setLoadedData] = useState<(Blob | null)[]>(
+    splatOptions.map(() => null)
+  );
+  const [objectUrls, setObjectUrls] = useState<(string | null)[]>(
+    splatOptions.map(() => null)
+  );
+  const [activeSplatIndex, setActiveSplatIndex] = useState(0);
+
+  const [ifcProperties, setIfcProperties] =
+    useState<IFCElementProperties | null>(null);
+  const [showIFC, setShowIFC] = useState(true);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAssistantEnlarged, setIsAssistantEnlarged] = useState(false);
   const [assistantText, setAssistantText] = useState("");
-
-  const { url, throttleDpr, maxDpr, throttleSplats, maxSplats, transformMode } =
+  const handleStart = () => {
+    setHasStarted(true);
+    if (isFirstLoad) {
+      setIsSplatLoading(true);
+      setTimeout(() => {
+        setIsSplatLoading(false);
+        setIsFirstLoad(false);
+      }, 2000);
+    }
+  };
+  const { throttleDpr, maxDpr, throttleSplats, maxSplats, transformMode } =
     useControls({
-      url: { label: "Model URL", options: urls },
       throttleDpr: { value: false },
       maxDpr: { value: window?.devicePixelRatio ?? 1 },
       throttleSplats: { value: false },
@@ -209,15 +209,26 @@ function App() {
     : maxSplats;
 
   useEffect(() => {
-    if (loadedData) {
-      const url = URL.createObjectURL(loadedData);
-      setObjectUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [loadedData]);
+    setIsSplatLoading(true);
+    const timer = setTimeout(() => setIsSplatLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, [activeSplatIndex]);
 
   useEffect(() => {
-    const downloadFile = async () => {
+    const newUrls = loadedData.map((data) =>
+      data ? URL.createObjectURL(data) : null
+    );
+    setObjectUrls(newUrls);
+    return () => newUrls.forEach((url) => url && URL.revokeObjectURL(url));
+  }, [loadedData]);
+
+  // Zmień useEffect odpowiedzialny za ładowanie danych na:
+  useEffect(() => {
+    const downloadFile = async (
+      url: string,
+      index: number,
+      trackProgress: boolean
+    ) => {
       const response = await fetch(url);
       const reader = response.body?.getReader();
       const contentLength = response.headers.get("content-length");
@@ -225,7 +236,6 @@ function App() {
       const chunks: Uint8Array[] = [];
 
       if (!contentLength) return;
-
       const totalLength = parseInt(contentLength, 10);
 
       while (receivedLength < totalLength) {
@@ -234,29 +244,95 @@ function App() {
         if (value) {
           chunks.push(value);
           receivedLength += value.length;
-          setProgress((receivedLength / totalLength) * 100);
+          if (trackProgress) {
+            setProgress((receivedLength / totalLength) * 100);
+          }
         }
       }
 
       const blob = new Blob(chunks);
-      setLoadedData(blob);
+      setLoadedData((prev) => {
+        const newData = [...prev];
+        newData[index] = blob;
+        return newData;
+      });
+
+      if (trackProgress) {
+        setProgress(100); // Gwarantuj 100% po załadowaniu pierwszego pliku
+      }
     };
 
-    downloadFile();
-  }, [url]);
+    // Najpierw załaduj pierwszy splat z progresem
+    downloadFile(splatOptions[0].url, 0, true).then(() => {
+      // Następnie załaduj pozostałe w tle bez śledzenia progresu
+      splatOptions.slice(1).forEach((option, index) => {
+        downloadFile(option.url, index + 1, false);
+      });
+    });
+  }, []);
 
   return (
     <>
       <Leva oneLineLabels collapsed />
+
+      {hasStarted && (
+        <div className="fixed left-4 top-4 z-50 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4">
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setShowIFC(!showIFC)}
+              className={`px-4 py-2 rounded-md text-sm ${
+                showIFC
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-red-600 text-white hover:bg-red-700"
+              } transition-colors`}
+            >
+              {showIFC ? "Hide IFC Models" : "Show IFC Models"}
+            </button>
+
+            {/* Lista modeli Splat */}
+            <div className="flex flex-col gap-2">
+              {splatOptions.map((option, index) => (
+                <button
+                  key={option.url}
+                  onClick={() => setActiveSplatIndex(index)}
+                  className={`px-4 py-2 rounded-md text-sm ${
+                    activeSplatIndex === index
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
+                >
+                  {option.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <LoadingScreen progress={progress} />
-      {/* Virtual Assistant */}
+
+      {isSplatLoading && (
+        <div className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="relative mx-auto w-32 h-32">
+              <div className="absolute inset-0 border-4 border-yellow-500 rounded-full animate-spin [animation-duration:2s]"></div>
+              <div className="absolute inset-0 border-4 border-yellow-500 rounded-full animate-spin [animation-duration:3s] [animation-direction:reverse]"></div>
+              <div className="absolute inset-0 flex items-center justify-center text-4xl">
+                🚧
+              </div>
+            </div>
+            <p className="text-xl font-bold text-yellow-500 animate-pulse">
+              Loading the model...
+            </p>
+          </div>
+        </div>
+      )}
+
       <div
         className="fixed bottom-4 right-4 z-[100] cursor-pointer"
         onClick={() => {
           setIsAssistantEnlarged(!isAssistantEnlarged);
-          setAssistantText((prev) =>
-            prev ? "" : "How can I assist you today?"
-          );
+          setAssistantText((prev) => (prev ? "" : "Demolition stage"));
         }}
       >
         <div
@@ -277,21 +353,32 @@ function App() {
         </div>
 
         {assistantText && (
-          <div className="absolute right-0 -top-[200px] w-64 p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg text-sm border border-blue-100">
+          <div className="absolute right-0 -top-[200px] w-80 p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg text-sm border border-blue-100">
             {assistantText}
             <div className="mt-2 space-y-2">
               <div className="text-gray-600">
-                1. Loading progress: {progress.toFixed(0)}%
+                🚧 Safety first! Loading progress: {progress.toFixed(0)}%
               </div>
-              <div className="text-gray-600">2. Click anywhere to start</div>
-              <div className="text-gray-600">3. Use WASD to move</div>
+              <div className="text-gray-600">
+                🔹 Hard hats and high-visibility vests are mandatory.
+              </div>
+              <div className="text-gray-600">
+                🔹 Do not enter the demolition zone without authorization.
+              </div>
+              <div className="text-gray-600">
+                🔹 Keep a safe distance from machinery - operators may not see
+                you!
+              </div>
+              <div className="text-gray-600">
+                🔹 Debris and waste must be disposed of in designated areas.
+              </div>
             </div>
           </div>
         )}
       </div>
       {progress >= 100 && !hasStarted && (
         <LandingPage
-          onStart={() => setHasStarted(true)}
+          onStart={handleStart}
           onOpenVideo={() => setIsVideoOpen(true)}
           onOpenHelp={() => setIsHelpOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -312,7 +399,12 @@ function App() {
           className="h-full w-full"
           gl={{ antialias: false }}
           dpr={effectiveDpr}
-          camera={{ position: [150, 150, 32], fov: 40 }}
+          camera={{
+            position: [150, 150, 32],
+            fov: 40,
+            near: 0.1,
+            far: 100000,
+          }}
         >
           <ambientLight intensity={0.8} />
           <PerformanceMonitor
@@ -336,27 +428,48 @@ function App() {
             }}
           >
             <OrbitControls
-              enabled={!isTransforming} // Blokuj kamerę, gdy transformControls są aktywne
-              enableDamping={false} // Wyłącz inercję (natychmiastowe zatrzymanie kamery)
-              target={[0, -25, 45]}
-              minDistance={35}
-              maxDistance={220}
+              enabled={!isTransforming}
+              enableDamping={false}
+              target={[0, 55, 95]}
+              minDistance={90}
+              maxDistance={150}
               minPolarAngle={Math.PI / 20}
               maxPolarAngle={Math.PI / 3}
               rotateSpeed={0.6}
             />
             <Suspense fallback={null}>
-              {objectUrl && (
-                <group position={[0, 0, 0]} scale={[270, 270, 270]}>
-                  <Splat url={objectUrl} maxSplats={effectiveSplats} />
-                </group>
+              {splatOptions.map(
+                (option, index) =>
+                  objectUrls[index] &&
+                  activeSplatIndex === index && (
+                    <group
+                      key={option.url}
+                      position={option.position}
+                      rotation={option.rotation}
+                      scale={option.scale}
+                    >
+                      <Splat
+                        url={objectUrls[index]!}
+                        maxSplats={effectiveSplats}
+                      />
+                    </group>
+                  )
               )}
-              <IFCModel onPropertiesSelected={setIfcProperties} />
+
+              <IFCModel
+                onPropertiesSelected={setIfcProperties}
+                visible={showIFC}
+                rotationY={95}
+              />
               <TransformControls
                 mode={transformMode as "translate" | "rotate" | "scale"}
                 onMouseDown={() => setIsTransforming(true)}
                 onMouseUp={() => setIsTransforming(false)}
+                showX={false} // Ukrywa oś X
+                showY={false} // Pozostawia oś Y widoczną
+                showZ={false} // Pozostawia oś Z widoczną
               >
+                {/*
                 <group position={[0, 0, 0]}>
                   <mesh scale={[1, 1, 1]}>
                     <boxGeometry args={[1, 1, 1]} />
@@ -368,13 +481,14 @@ function App() {
                   </mesh>
                   <axesHelper args={[1.5]} />
                 </group>
+                */}
               </TransformControls>
               <Environment preset="city" />
             </Suspense>
           </PerformanceMonitor>
         </Canvas>
       )}
-      {ifcProperties && (
+      {showIFC && ifcProperties && (
         <div className="fixed top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg max-w-xs">
           <h2 className="font-bold text-lg mb-2">IFC Properties</h2>
           <div className="space-y-2 text-sm">
@@ -384,20 +498,6 @@ function App() {
                 {String((value as { value?: unknown })?.value)}
               </div>
             ))}
-          </div>
-        </div>
-      )}
-      {hasStarted && (
-        <div className="fixed bottom-4 right-4 z-50 group">
-          <div className="relative w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm shadow-lg cursor-pointer transition-transform duration-300 hover:scale-110">
-            <img
-              src="/assistant.png" // Bezpośrednia ścieżka do pliku w folderze public
-              alt="Virtual Assistant"
-              className="w-full h-full rounded-full object-cover p-2"
-            />
-            <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white animate-pulse">
-              ?
-            </div>
           </div>
         </div>
       )}

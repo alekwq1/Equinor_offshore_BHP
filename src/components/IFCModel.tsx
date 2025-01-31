@@ -2,20 +2,32 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useThree } from "@react-three/fiber";
 import { IFCLoader } from "web-ifc-three";
 import * as THREE from "three";
+
 export interface IFCProps {
-  GlobalId?: string;
-  Name?: string;
-  Description?: string;
-  onPropertiesSelected?: (props: IFCProps | null) => void;
-  rotationY?: number; // Nowy parametr
+  onPropertiesSelected?: (props: IFCElementProperties | null) => void;
+  visible: boolean;
+  rotationY?: number;
 }
 
-const IFCModel: React.FC<IFCProps> = ({ onPropertiesSelected }) => {
+export type IFCElementProperties = {
+  GlobalId?: { value: string };
+  Name?: { value: string };
+  Description?: { value: string };
+  [key: string]: { value: unknown } | undefined;
+};
+
+const IFCModel: React.FC<IFCProps> = ({
+  onPropertiesSelected,
+  visible,
+  rotationY = 95,
+}) => {
   const { scene, camera, gl } = useThree();
   const ifcLoaderRef = useRef<IFCLoader | null>(null);
-  const [selectedProps, setSelectedProps] = useState<IFCProps | null>(null);
+  const [selectedProps, setSelectedProps] =
+    useState<IFCElementProperties | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
 
+  // Ładowanie modelu
   useEffect(() => {
     const ifcLoader = new IFCLoader();
     ifcLoader.ifcManager.setWasmPath("/");
@@ -24,9 +36,8 @@ const IFCModel: React.FC<IFCProps> = ({ onPropertiesSelected }) => {
       "/model.ifc",
       (model) => {
         model.scale.set(1, 1, 1);
-        model.position.set(18.5, -50.4, 120);
-        // Dodaj obrót o 55 stopni w osi X
-        model.rotation.y = THREE.MathUtils.degToRad(95);
+        model.position.set(18.5, 50.4, 120);
+        model.rotation.y = THREE.MathUtils.degToRad(rotationY);
         scene.add(model);
         modelRef.current = model;
       },
@@ -43,11 +54,19 @@ const IFCModel: React.FC<IFCProps> = ({ onPropertiesSelected }) => {
       }
       ifcLoaderRef.current = null;
     };
-  }, [scene]);
+  }, [scene, rotationY]);
 
+  // Aktualizacja widoczności modelu
+  useEffect(() => {
+    if (modelRef.current) {
+      modelRef.current.visible = visible;
+    }
+  }, [visible]);
+
+  // Obsługa kliknięć
   const handlePointerDown = useCallback(
     async (event: PointerEvent) => {
-      if (!ifcLoaderRef.current || !modelRef.current) return;
+      if (!visible || !ifcLoaderRef.current || !modelRef.current) return;
 
       const rect = gl.domElement.getBoundingClientRect();
       const mouse = new THREE.Vector2(
@@ -75,26 +94,31 @@ const IFCModel: React.FC<IFCProps> = ({ onPropertiesSelected }) => {
         if (!expressId) return;
 
         const properties =
-          await ifcLoaderRef.current.ifcManager.getItemProperties(0, expressId);
+          (await ifcLoaderRef.current.ifcManager.getItemProperties(
+            0,
+            expressId
+          )) as IFCElementProperties;
         setSelectedProps(properties);
       } catch (error) {
         console.error("Błąd podczas przetwarzania:", error);
       }
     },
-    [camera, gl.domElement]
+    [camera, gl.domElement, visible]
   );
 
+  // Event listeners
   useEffect(() => {
     const canvas = gl.domElement;
     canvas.addEventListener("pointerdown", handlePointerDown);
     return () => canvas.removeEventListener("pointerdown", handlePointerDown);
   }, [gl.domElement, handlePointerDown]);
 
+  // Propagacja właściwości
   useEffect(() => {
     if (onPropertiesSelected) {
-      onPropertiesSelected(selectedProps);
+      onPropertiesSelected(visible ? selectedProps : null);
     }
-  }, [selectedProps, onPropertiesSelected]);
+  }, [selectedProps, onPropertiesSelected, visible]);
 
   return null;
 };

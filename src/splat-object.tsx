@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import SplatSortWorker from './splat-sort-worker?worker';
-import { fragmentShaderSource, vertexShaderSource } from './splat-shaders';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import SplatSortWorker from "./splat-sort-worker?worker";
+import { fragmentShaderSource, vertexShaderSource } from "./splat-shaders";
+import { useFrame, useThree } from "@react-three/fiber";
 
 const computeFocalLengths = (
   width: number,
@@ -19,7 +19,7 @@ const computeFocalLengths = (
 };
 
 export function Splat({
-  url = 'https://antimatter15.com/splat-data/train.splat',
+  url = "https://antimatter15.com/splat-data/train.splat",
   maxSplats = Infinity,
 }: {
   url?: string;
@@ -96,21 +96,21 @@ export function Splat({
     let stopLoading = false;
     const loadModel = async () => {
       const req = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit',
+        mode: "cors",
+        credentials: "omit",
       });
       if (
         req.status != 200 ||
         req.body == null ||
         req.headers == null ||
-        req.headers.get('content-length') == null
+        req.headers.get("content-length") == null
       ) {
-        throw new Error(req.status + ' Unable to load ' + req.url);
+        throw new Error(req.status + " Unable to load " + req.url);
       }
       const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
       const reader = req.body.getReader();
       let splatData = new Uint8Array(
-        parseInt(req.headers.get('content-length')!)
+        parseInt(req.headers.get("content-length")!)
       );
       let vertexCount = 0;
       let lastVertexCount = -1;
