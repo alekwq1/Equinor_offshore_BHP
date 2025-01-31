@@ -185,3 +185,20 @@ button {
     opacity: 0.5;
   }
 }
+/* Przykład media queries */
+@media (max-width: 768px) {
+  .text-4xl {
+    font-size: 2rem;
+  }
+  .text-lg {
+    font-size: 1rem;
+  }
+  .px-8 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .py-4 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}

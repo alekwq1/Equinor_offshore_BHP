@@ -48,7 +48,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress }) => (
   >
     <div className="absolute inset-0 flex flex-col items-center justify-center">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
+        <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold text-white mb-4">
           EQ_LEBA_BASE
         </h1>
         <div className="w-64 h-2 bg-gray-700 rounded-full mx-auto">
@@ -431,7 +431,7 @@ function App() {
               enabled={!isTransforming}
               enableDamping={false}
               target={[0, 55, 95]}
-              minDistance={90}
+              minDistance={50}
               maxDistance={150}
               minPolarAngle={Math.PI / 20}
               maxPolarAngle={Math.PI / 3}
