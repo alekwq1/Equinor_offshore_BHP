@@ -465,11 +465,10 @@ function App() {
                 mode={transformMode as "translate" | "rotate" | "scale"}
                 onMouseDown={() => setIsTransforming(true)}
                 onMouseUp={() => setIsTransforming(false)}
-                showX={false} // Ukrywa oś X
-                showY={false} // Pozostawia oś Y widoczną
-                showZ={false} // Pozostawia oś Z widoczną
+                showX={false} // Hide X axis
+                showY={false} // Hide Y axis
+                showZ={false} // Hide Z axis
               >
-                {/*
                 <group position={[0, 0, 0]}>
                   <mesh scale={[1, 1, 1]}>
                     <boxGeometry args={[1, 1, 1]} />
@@ -481,7 +480,6 @@ function App() {
                   </mesh>
                   <axesHelper args={[1.5]} />
                 </group>
-                */}
               </TransformControls>
               <Environment preset="city" />
             </Suspense>
