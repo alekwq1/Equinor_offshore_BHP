@@ -185,20 +185,8 @@ button {
     opacity: 0.5;
   }
 }
-/* Przykład media queries */
-@media (max-width: 768px) {
-  .text-4xl {
-    font-size: 2rem;
-  }
-  .text-lg {
-    font-size: 1rem;
-  }
-  .px-8 {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  .py-4 {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-  }
+/* Dodatkowe style dla tekstu w przestrzeni 3D */
+.text-3d {
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1), 2px 2px 2px rgba(0, 0, 0, 0.1),
+    3px 3px 3px rgba(0, 0, 0, 0.1);
 }
