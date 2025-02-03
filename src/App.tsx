@@ -14,6 +14,7 @@ import VideoModal from "./components/VideoModal.tsx";
 import HelpModal from "./components/HelpModal.tsx";
 import SettingsModal from "./components/SettingsModal.tsx";
 import IFCModel, { type IFCElementProperties } from "./components/IFCModel.tsx";
+import { useSpring, animated } from "@react-spring/three";
 
 interface InfoPoint {
   position: [number, number, number];
@@ -34,6 +35,34 @@ const degToRad = (deg: number) => (deg * Math.PI) / 180;
 const isMobile = () => window.innerWidth < 768;
 
 const splatOptions = [
+  {
+    name: "03.02.2025",
+    url: "https://huggingface.co/datasets/Alekso/Equinor_03_02_2025/resolve/main/Equinor_03_02_2025.splat",
+
+    position: [-2, -145.6, 127] as [number, number, number],
+    rotation: [degToRad(0), degToRad(8), degToRad(0)] as [
+      number,
+      number,
+      number
+    ],
+    scale: [34.1, 34.1, 34.1] as [number, number, number],
+    infoPoints: [
+      {
+        position: [-0.5, 5.9, 1.1],
+        title: "Construction Site Entrance",
+        content:
+          "The designated access point for workers, vehicles, and deliveries. Often secured with gates, checkpoints, and safety signage to control entry and ensure site regulations are followed.",
+        markerScale: 0.1,
+      },
+      {
+        position: [-1.2, 5.9, 0.5],
+        title: "Construction Site Office",
+        content:
+          "A central hub on a construction site for project management, coordination, and documentation. Used by site managers and engineers for planning, monitoring progress, and meetings. Equipped with essential tools and technology for efficient oversight",
+        markerScale: 0.1,
+      },
+    ] as InfoPoint[],
+  },
   {
     name: "29.01.2025",
     url: "https://huggingface.co/Alekso/Equinor29012025/resolve/main/Equinor_29_01_2025.splat",
@@ -184,30 +213,51 @@ const InfoPointMarker: React.FC<InfoPointMarkerProps> = ({
   title,
   onClick,
   markerScale = 1,
-}) => (
-  <Billboard position={position}>
-    <group scale={[markerScale, markerScale, markerScale]}>
-      <mesh
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-      >
-        <circleGeometry args={[0.8, 32]} />
-        <meshStandardMaterial color="#3b82f6" transparent opacity={0.8} />
-      </mesh>
-      <Text
-        position={[0, 1.2, 0]}
-        fontSize={0.5}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {title}
-      </Text>
-    </group>
-  </Billboard>
-);
+}) => {
+  const [hovered, setHovered] = useState(false);
+
+  // Animacja powiększania i pulsowania
+  const { scale } = useSpring({
+    scale: hovered ? markerScale * 1.2 : markerScale,
+    config: { mass: 1, tension: 300, friction: 10 },
+  });
+
+  const { opacity } = useSpring({
+    opacity: hovered ? 1 : 0.8,
+    config: { mass: 1, tension: 300, friction: 10 },
+  });
+
+  return (
+    <Billboard position={position}>
+      <animated.group scale={scale}>
+        <mesh
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          onPointerOver={() => setHovered(true)}
+          onPointerOut={() => setHovered(false)}
+        >
+          <circleGeometry args={[0.8, 32]} />
+          <animated.meshStandardMaterial
+            color="#3b82f6"
+            transparent
+            opacity={opacity}
+          />
+        </mesh>
+        <Text
+          position={[0, 1.2, 0]}
+          fontSize={0.5}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {title}
+        </Text>
+      </animated.group>
+    </Billboard>
+  );
+};
 
 const InfoPointModal = ({
   infoPoint,
@@ -538,8 +588,8 @@ function App() {
               enableDamping={true}
               dampingFactor={0.05}
               target={[0, 55, 95]}
-              minDistance={isMobile() ? 30 : 50}
-              maxDistance={isMobile() ? 100 : 150}
+              minDistance={isMobile() ? 50 : 30}
+              maxDistance={isMobile() ? 200 : 120}
               minPolarAngle={Math.PI / 27}
               maxPolarAngle={Math.PI / 4.2}
               rotateSpeed={isMobile() ? 0.4 : 0.6}
@@ -577,22 +627,19 @@ function App() {
                 rotationY={95}
               />
               {/*
-              <TransformControls
-                mode={transformMode as "translate" | "rotate" | "scale"}
-                onMouseDown={() => setIsTransforming(true)}
-                onMouseUp={() => setIsTransforming(false)}
+              <mesh
+                scale={[68.76, 68.76, 68.76]}
+                position={[17.5, 20, 133.5]} // Pozycja
+                rotation={[degToRad(0), degToRad(4.5), degToRad(0)]} // Rotacja
               >
-              
-                <mesh scale={[1, 1, 1]}>
-                  <boxGeometry args={[1, 1, 1]} />
-                  <meshStandardMaterial
-                    color="orange"
-                    transparent
-                    opacity={0.7}
-                  />
-                </mesh>
-                
-              </TransformControls>*/}
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial
+                  color="orange"
+                  transparent
+                  opacity={0.7}
+                />
+              </mesh>
+*/}
               <Environment preset="city" />
             </Suspense>
           </PerformanceMonitor>
