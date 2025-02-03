@@ -1,3 +1,4 @@
+// App.tsx
 import React, { Suspense, useState, useEffect } from "react";
 import {
   Environment,
@@ -21,12 +22,14 @@ interface InfoPoint {
   imageUrl?: string;
   markerScale?: number;
 }
+
 interface InfoPointMarkerProps {
   position: [number, number, number];
   title: string;
   onClick: () => void;
   markerScale?: number;
 }
+
 const degToRad = (deg: number) => (deg * Math.PI) / 180;
 const isMobile = () => window.innerWidth < 768;
 
@@ -47,14 +50,14 @@ const splatOptions = [
         title: "Construction Site Entrance",
         content:
           "The designated access point for workers, vehicles, and deliveries. Often secured with gates, checkpoints, and safety signage to control entry and ensure site regulations are followed.",
-        markerScale: 0.2, // Tutaj ustawiamy skalę
+        markerScale: 0.2,
       },
       {
         position: [2, 3.5, 2.2],
         title: "Construction Site Office",
         content:
           "A central hub on a construction site for project management, coordination, and documentation. Used by site managers and engineers for planning, monitoring progress, and meetings. Equipped with essential tools and technology for efficient oversight",
-        markerScale: 0.2, // Tutaj ustawiamy skalę
+        markerScale: 0.2,
       },
     ] as InfoPoint[],
   },
@@ -598,14 +601,26 @@ function App() {
 
       {showIFC && ifcProperties && (
         <div className="fixed top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg max-w-xs">
-          <h2 className="font-bold text-lg mb-2">IFC Properties</h2>
-          <div className="space-y-2 text-sm">
-            {Object.entries(ifcProperties).map(([key, value]) => (
-              <div key={key}>
-                <span className="font-medium">{key}:</span>{" "}
-                {String((value as { value?: unknown })?.value)}
-              </div>
-            ))}
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-bold text-lg">IFC Properties</h2>
+            <button
+              onClick={() => setIfcProperties(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-2 text-sm max-h-96 overflow-y-auto">
+            {Object.entries(ifcProperties).map(([key, value]) => {
+              // Dostosuj strukturę wartości do Twojego API IFC
+              const displayValue = value?.value ?? JSON.stringify(value);
+              return (
+                <div key={key} className="break-words">
+                  <span className="font-medium">{key}:</span>{" "}
+                  {String(displayValue)}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

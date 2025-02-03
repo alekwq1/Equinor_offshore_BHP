@@ -16,6 +16,18 @@ export type IFCElementProperties = {
   [key: string]: { value: unknown } | undefined;
 };
 
+// Zaktualizowany typ PropertySet
+interface PropertySet {
+  Name?: { value: string }; // Dodaj właściwość Name
+  HasProperties?: Array<{ name: string; value: unknown }>;
+}
+
+interface Material {
+  expressID: number;
+  type: number;
+  Name: { value: string };
+}
+
 const IFCModel: React.FC<IFCProps> = ({
   onPropertiesSelected,
   visible,
@@ -27,97 +39,216 @@ const IFCModel: React.FC<IFCProps> = ({
     useState<IFCElementProperties | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
 
-  // Ładowanie modelu
+  // Inicjalizacja ładowania modelu
   useEffect(() => {
     const ifcLoader = new IFCLoader();
     ifcLoader.ifcManager.setWasmPath("/");
 
-    ifcLoader.load(
-      "/model.ifc",
-      (model) => {
-        model.scale.set(1, 1, 1);
-        model.position.set(18.5, 50.4, 120);
-        model.rotation.y = THREE.MathUtils.degToRad(rotationY);
-        scene.add(model);
-        modelRef.current = model;
-      },
-      undefined,
-      (error) => console.error("Błąd ładowania modelu IFC:", error)
-    );
+    const loadModel = async () => {
+      try {
+        const model = await ifcLoader.loadAsync("/model.ifc");
+        console.log("Model loaded successfully:", model);
 
+        if (model instanceof THREE.Object3D) {
+          model.scale.set(1, 1, 1);
+          model.position.set(18.5, 50.4, 120);
+          model.rotation.y = THREE.MathUtils.degToRad(rotationY);
+          scene.add(model);
+          modelRef.current = model;
+        } else {
+          console.error("Loaded model is not a valid Object3D");
+        }
+      } catch (error) {
+        console.error("Błąd ładowania modelu:", error);
+      }
+    };
+
+    loadModel();
     ifcLoaderRef.current = ifcLoader;
 
     return () => {
-      if (modelRef.current) {
-        scene.remove(modelRef.current);
-        modelRef.current = null;
-      }
-      ifcLoaderRef.current = null;
+      if (modelRef.current) scene.remove(modelRef.current);
+      ifcLoaderRef.current?.ifcManager.dispose();
     };
   }, [scene, rotationY]);
 
-  // Aktualizacja widoczności modelu
+  // Obsługa widoczności modelu
   useEffect(() => {
-    if (modelRef.current) {
-      modelRef.current.visible = visible;
-    }
+    if (modelRef.current) modelRef.current.visible = visible;
   }, [visible]);
 
-  // Obsługa kliknięć
+  // Główna funkcja obsługi kliknięcia
   const handlePointerDown = useCallback(
     async (event: PointerEvent) => {
       if (!visible || !ifcLoaderRef.current || !modelRef.current) return;
 
-      const rect = gl.domElement.getBoundingClientRect();
-      const mouse = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1
-      );
-
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, camera);
-
-      const intersects = raycaster.intersectObjects([modelRef.current], true);
-      if (intersects.length === 0) return;
-
-      const intersected = intersects[0];
-
-      if (!(intersected.object instanceof THREE.Mesh) || !intersected.face)
-        return;
+      // Funkcja do wyciągania wartości z obiektów IFC
+      const extractValue = (obj: unknown): unknown => {
+        if (obj && typeof obj === "object") {
+          // Sprawdź, czy wartość jest w polu NominalValue (typowe dla IFC)
+          if ("NominalValue" in obj) {
+            return (obj as { NominalValue: { value: unknown } }).NominalValue
+              .value;
+          }
+          // Domyślnie sprawdź pole "value"
+          if ("value" in obj) {
+            return (obj as { value: unknown }).value;
+          }
+        }
+        return obj;
+      };
 
       try {
-        const expressId = ifcLoaderRef.current.ifcManager.getExpressId(
-          intersected.object.geometry,
-          intersected.faceIndex ?? 0
+        const rect = gl.domElement.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
 
-        if (!expressId) return;
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
 
-        const properties =
-          (await ifcLoaderRef.current.ifcManager.getItemProperties(
-            0,
-            expressId
-          )) as IFCElementProperties;
-        setSelectedProps(properties);
+        const intersects = raycaster.intersectObjects([modelRef.current], true);
+        console.log("Intersections:", intersects);
+        if (intersects.length === 0) return;
+
+        const firstIntersection = intersects[0];
+        if (
+          !(firstIntersection.object instanceof THREE.Mesh) ||
+          !firstIntersection.face
+        )
+          return;
+
+        const expressID = ifcLoaderRef.current.ifcManager.getExpressId(
+          firstIntersection.object.geometry,
+          firstIntersection.faceIndex ?? 0
+        );
+        console.log("ExpressID:", expressID);
+        if (!expressID) return;
+
+        const [itemProps, propertySets, typeProperties, materialsProperties] =
+          await Promise.all([
+            ifcLoaderRef.current.ifcManager.getItemProperties(0, expressID),
+            ifcLoaderRef.current.ifcManager.getPropertySets(0, expressID),
+            ifcLoaderRef.current.ifcManager.getTypeProperties(0, expressID),
+            ifcLoaderRef.current.ifcManager.getMaterialsProperties(
+              0,
+              expressID
+            ),
+          ]);
+
+        console.log("Item Properties:", itemProps);
+        console.log("Property Sets:", propertySets); // Dodatkowy log
+        console.log("Type Properties:", typeProperties);
+        console.log("Materials Properties:", materialsProperties);
+
+        // Łączenie wszystkich właściwości w jeden obiekt
+        const allProperties: IFCElementProperties = {};
+
+        // Dodanie właściwości z itemProps
+        if (itemProps && typeof itemProps === "object") {
+          Object.entries(itemProps).forEach(([key, value]) => {
+            allProperties[key] = { value: extractValue(value) };
+          });
+        }
+
+        // Dodanie właściwości z propertySets
+        if (Array.isArray(propertySets)) {
+          propertySets.forEach((set: PropertySet) => {
+            if (
+              set.Name &&
+              set.HasProperties &&
+              Array.isArray(set.HasProperties)
+            ) {
+              const setName = set.Name.value;
+              const properties: Record<string, { value: unknown }> = {};
+
+              set.HasProperties.forEach((prop) => {
+                if (prop.name && prop.value !== undefined) {
+                  // Użyj extractValue dla prop.value
+                  properties[prop.name] = { value: extractValue(prop.value) };
+                }
+              });
+
+              allProperties[setName] = { value: properties };
+            }
+          });
+        }
+
+        // Dodanie właściwości z typeProperties
+        if (typeProperties && typeof typeProperties === "object") {
+          Object.entries(typeProperties).forEach(([key, value]) => {
+            allProperties[`TYPE_${key}`] = { value: extractValue(value) };
+          });
+        }
+
+        // Dodanie właściwości z materialsProperties
+        if (Array.isArray(materialsProperties)) {
+          materialsProperties.forEach((material: Material) => {
+            if (material && typeof material === "object") {
+              Object.entries(material).forEach(([key, value]) => {
+                allProperties[`MATERIAL_${key}`] = {
+                  value: extractValue(value),
+                };
+              });
+            }
+          });
+        }
+
+        console.log("Zebrane właściwości:", allProperties);
+
+        // Iterowanie po właściwościach ERB_General
+        if (
+          allProperties.ERB_General &&
+          typeof allProperties.ERB_General.value === "object" &&
+          allProperties.ERB_General.value !== null
+        ) {
+          console.log("ERB_General:");
+          Object.entries(allProperties.ERB_General.value).forEach(
+            ([key, value]) => {
+              const propertyValue = (value as { value: unknown }).value; // Rzutowanie typu
+              console.log(`${key}: ${propertyValue}`);
+            }
+          );
+        }
+
+        // Iterowanie po właściwościach ERB_Data
+        if (
+          allProperties.ERB_Data &&
+          typeof allProperties.ERB_Data.value === "object" &&
+          allProperties.ERB_Data.value !== null
+        ) {
+          console.log("ERB_Data:");
+          Object.entries(allProperties.ERB_Data.value).forEach(
+            ([key, value]) => {
+              const propertyValue = (value as { value: unknown }).value; // Rzutowanie typu
+              console.log(`${key}: ${propertyValue}`);
+            }
+          );
+        }
+
+        // Konwersja właściwości do formatu JSON
+        const jsonProperties = JSON.stringify(allProperties, null, 2);
+        console.log("JSON Properties:", jsonProperties);
+
+        setSelectedProps(allProperties);
       } catch (error) {
-        console.error("Błąd podczas przetwarzania:", error);
+        console.error("Błąd przetwarzania:", error);
+        setSelectedProps(null);
       }
     },
     [camera, gl.domElement, visible]
   );
-
-  // Event listeners
+  // Rejestracja event listenerów
   useEffect(() => {
     const canvas = gl.domElement;
     canvas.addEventListener("pointerdown", handlePointerDown);
     return () => canvas.removeEventListener("pointerdown", handlePointerDown);
   }, [gl.domElement, handlePointerDown]);
 
-  // Propagacja właściwości
+  // Propagacja właściwości do komponentu nadrzędnego
   useEffect(() => {
-    if (onPropertiesSelected) {
-      onPropertiesSelected(visible ? selectedProps : null);
-    }
+    onPropertiesSelected?.(visible ? selectedProps : null);
   }, [selectedProps, onPropertiesSelected, visible]);
 
   return null;
