@@ -1,0 +1,192 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+html,
+body,
+#root {
+  background: black !important;
+  overflow: hidden;
+}
+canvas.splat-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+canvas.splat-canvas {
+  background-color: black !important;
+}
+
+/* Dla pewności - jeśli tło jest gdzieś indziej */
+.splat-container,
+.splat-background {
+  background: black !important;
+}
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Przycisk i animacje */
+button {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.animate-shimmer {
+  animation: shimmer 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-border-pulse {
+  animation: border-pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes border-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Ekran ładowania */
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 4rem;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background-image: linear-gradient(0deg, #000000 0%, #010101 74%);
+  opacity: 1;
+  transition: opacity 1s ease-in-out;
+}
+
+.loading-screen--hidden {
+  animation: fade-out 0.5s ease-in-out forwards 1s;
+}
+
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.loading-screen__title {
+  font-size: 2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #d50e22;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress__container {
+  width: 100%;
+  height: 1rem;
+  background-color: rgba(76, 129, 215, 0.2);
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.progress__bar {
+  width: 0;
+  height: 100%;
+  background-color: #1e40af;
+  transition: width 0.5s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Optymalizacje dla animacji */
+.backface-visibility-hidden {
+  backface-visibility: hidden;
+}
+
+.transform-gpu {
+  transform: translateZ(0);
+}
+
+.will-change-transform {
+  will-change: transform;
+}
+/* Animacje dla efektu ładowania */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes border-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-border-pulse {
+  animation: border-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+/* Dodatkowe style dla tekstu w przestrzeni 3D */
+.text-3d {
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1), 2px 2px 2px rgba(0, 0, 0, 0.1),
+    3px 3px 3px rgba(0, 0, 0, 0.1);
+}
