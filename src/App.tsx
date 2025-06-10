@@ -170,15 +170,9 @@ function App() {
 
   // --- STAŁY PUBLICZNY GLB ---
   const [showPublicGlb, setShowPublicGlb] = useState(false);
-  const [publicGlbPos, setPublicGlbPos] = useState<[number, number, number]>([
-    14, 1.8, -23,
-  ]);
-  const [publicGlbRot, setPublicGlbRot] = useState<[number, number, number]>([
-    0, 160, 0,
-  ]);
-  const [publicGlbScale, setPublicGlbScale] = useState<
-    [number, number, number]
-  >([1, 1, 1]);
+  const publicGlbPos: [number, number, number] = [14, 1.8, -23];
+  const publicGlbRot: [number, number, number] = [0, 160, 0];
+  const publicGlbScale: [number, number, number] = [1, 1, 1];
 
   // --- GLB upload użytkownika ---
   const [userGlbUrl, setUserGlbUrl] = useState<string | null>(null);
@@ -903,6 +897,7 @@ function App() {
               <IFCModel
                 onPropertiesSelected={setIfcProperties}
                 rotationY={95}
+                visible={showIFC}
               />
             )}
             {/* GLB z public/models */}
