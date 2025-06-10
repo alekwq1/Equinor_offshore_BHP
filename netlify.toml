@@ -1,8 +1,8 @@
 [build]
-  command = "npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
   publish = "dist"
 
 [[headers]]
   for = "/*"
   [headers.values]
-  Content-Security-Policy = "script-src 'self' 'unsafe-eval';"
+  Content-Security-Policy = "script-src 'self' 'unsafe-eval'"
