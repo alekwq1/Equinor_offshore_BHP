@@ -1,4 +1,4 @@
-import type React, { Suspense, useState, useEffect, useRef } from "react";
+import React, { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, CameraControls } from "@react-three/drei";
 import { useLoader } from "@react-three/fiber";
