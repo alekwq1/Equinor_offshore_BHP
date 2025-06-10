@@ -1,4 +1,3 @@
-import React from "react";
 import { IFCElementProperties } from "./IFCModel"; // Upewnij się, że ścieżka się zgadza!
 
 type IFCPropertiesPanelProps = {

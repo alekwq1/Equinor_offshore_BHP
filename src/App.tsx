@@ -1,18 +1,26 @@
 import React, { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, CameraControls } from "@react-three/drei";
-import * as THREE from "three";
 import { useLoader } from "@react-three/fiber";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import IFCModel, { type IFCElementProperties } from "./components/IFCModel";
 import { Splat } from "./splat-object";
 import HowToUseModal from "./components/HowToUseModal";
 import LoadingOverlay from "./components/LoadingOverlay";
 import IFCPropertiesPanel from "./components/IFCPropertiesPanel";
-import TopBarButtons from "./components/TopBarButtons";
 import CameraControlsButtons from "./components/CameraControlsButtons";
 import { InfoPointList } from "./components/InfoPointList";
+
+// Typ do InfoPointów (żeby nie było konfliktów!)
+type InfoPointData = {
+  id: string;
+  position: [number, number, number];
+  label: string;
+  icon: string;
+  content: string;
+  cameraPosition?: [number, number, number];
+};
 
 const isMobile = () => window.innerWidth < 768;
 const APP_PASSWORD = "12345678";
@@ -24,69 +32,70 @@ const splatOption = {
   scale: [1, 1, 1] as [number, number, number],
 };
 
-const infoPoints = [
+// Zamieniamy wszystkie position/cameraPosition na tuple [number, number, number]
+const infoPoints: InfoPointData[] = [
   {
     id: "AED on Site & Eye Wash Station",
-    position: [-62, 3, 40],
+    position: [-62, 3, 40] as [number, number, number],
     label: "AED on Site & Eye Wash Station",
     icon: "💓",
     content: `•	AED: 🏥⚡
 •	Eye wash: 👁️🚿
 `,
-    cameraPosition: [-15, 65, 80], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [-15, 65, 80] as [number, number, number],
   },
   {
     id: "H&S Board (Health & Safety)2",
-    position: [-7, 3, -35],
+    position: [-7, 3, -35] as [number, number, number],
     label: "H&S Board (Health & Safety)",
     icon: "⛑️",
     content: "🧯⛑️ (fire extinguisher + first aid kit)",
-    cameraPosition: [50, 50, -50], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [50, 50, -50] as [number, number, number],
   },
   {
     id: "Pedestrian Communication Route",
-    position: [-38, 3, 20],
+    position: [-38, 3, 20] as [number, number, number],
     label: "Pedestrian Communication Route",
     icon: "🚸",
     content: "Pedestrian Communication Route",
-    cameraPosition: [0, 100, 35], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [0, 100, 35] as [number, number, number],
   },
   {
     id: "No Entry – Seagull Nesting Area",
-    position: [-30, 3, 55],
+    position: [-30, 3, 55] as [number, number, number],
     label: "No Entry – Seagull Nesting Area",
     icon: "🐦",
     content: "⛔🐦 No Entry – Seagull Nesting Area",
-    cameraPosition: [-15, 65, 80], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [-15, 65, 80] as [number, number, number],
   },
-
   {
     id: "Emergency Board – Nearest Hospital Phone Number",
-    position: [-57, 3, 22],
+    position: [-57, 3, 22] as [number, number, number],
     label: "NEmergency Board – Nearest Hospital Phone Number",
     icon: "📞",
     content: "📞🏥 Emergency Board – Nearest Hospital Phone Number",
+    // cameraPosition pominięty – OK!
   },
   {
     id: "No Entry – Fuel Storage Area",
-    position: [-50, 3, 0],
+    position: [-50, 3, 0] as [number, number, number],
     label: "No Entry – Fuel Storage Area",
     icon: "⛽",
     content: "⛔⛽ No Entry – Fuel Storage Area",
-    cameraPosition: [0, 100, 35], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [0, 100, 35] as [number, number, number],
   },
   {
     id: "H&S Board (Health & Safety)",
-    position: [45, 3, -15],
+    position: [45, 3, -15] as [number, number, number],
     label: "H&S Board (Health & Safety)",
     icon: "⛑️",
     content: `•	Lifebuoy with rope: 🛟
        •	First aid kit + assigned personnel list: 💊📜`,
-    cameraPosition: [60, 150, 80], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [60, 150, 80] as [number, number, number],
   },
   {
     id: "Safety Board",
-    position: [-50, 3, 65],
+    position: [-50, 3, 65] as [number, number, number],
     label: "Safety Board",
     icon: "🚧",
     content: `• Evacuation assembly point 🚨
@@ -94,39 +103,41 @@ const infoPoints = [
 • Fire extinguisher 🔥🧯
 • Fire blanket 🧯🛡️
 `,
-    cameraPosition: [0, 80, 150], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [0, 80, 150] as [number, number, number],
   },
   {
     id: "Construction Safety Mirror",
-    position: [-62, 10, 22],
+    position: [-62, 10, 22] as [number, number, number],
     label: "Construction Safety Mirror",
     icon: "🔍",
     content: `Construction Safety Mirror🔍👷‍♂️
 `,
-    cameraPosition: [0, 120, 35], // PRZYKŁADOWE WARTOŚCI
+    cameraPosition: [0, 120, 35] as [number, number, number],
   },
 ];
 
-// Stały model z public/models/building.glb
 const PUBLIC_GLB = { label: "Building", url: "/models/building.glb" };
 
-// Pomocnicza funkcja (na górze pliku)
 const degToRad = (deg: number): number => (deg * Math.PI) / 180;
+
+type GLBModelProps = {
+  url: string;
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: [number, number, number];
+  visible: boolean;
+};
 
 function GLBModel({
   url,
   position = [14, 1.6, -23],
-  rotation = [0, 160, 0], // <-- tutaj podajesz w stopniach "po ludzku"
+  rotation = [0, 160, 0],
   scale = [1, 1, 1],
   visible,
-}) {
-  // Przelicz rotation na radiany TUTAJ:
-  const radianRotation = rotation.map(degToRad);
-
-  // Ładujesz model
+}: GLBModelProps) {
+  const radianRotation = rotation.map(degToRad) as [number, number, number];
   const gltf = useLoader(GLTFLoader, url);
   if (!visible) return null;
-
   return (
     <primitive
       object={gltf.scene}
@@ -151,10 +162,12 @@ function App() {
   const [showHowToUse, setShowHowToUse] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfoPoints, setShowInfoPoints] = useState(true);
+
   // --- PASSWORD MODAL ---
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPasswordError, setShowPasswordError] = useState(false);
+
   // --- STAŁY PUBLICZNY GLB ---
   const [showPublicGlb, setShowPublicGlb] = useState(false);
   const [publicGlbPos, setPublicGlbPos] = useState<[number, number, number]>([
@@ -189,18 +202,21 @@ function App() {
 
   // --- KAMERA ---
   const cameraControls = useRef<any>(null);
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
+
+  const handlePasswordSubmit = (
+    e: React.FormEvent<HTMLFormElement> | React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    e.preventDefault?.();
     if (password === APP_PASSWORD) {
       setIsAuthenticated(true);
       setShowPasswordError(false);
-      setPassword(""); // czyść pole po sukcesie
+      setPassword("");
     } else {
       setShowPasswordError(true);
       setPassword("");
     }
   };
-  // --- ŁADOWANIE SPLAT ---
+
   useEffect(() => {
     setShowLoading(true);
     const downloadFile = async (url: string) => {
@@ -238,12 +254,16 @@ function App() {
     if (loadedData) {
       const url = URL.createObjectURL(loadedData);
       setObjectUrl(url);
-      return () => url && URL.revokeObjectURL(url);
+      return () => {
+        url && URL.revokeObjectURL(url);
+      };
     }
   }, [loadedData]);
 
-  // --- FOCUS CAMERA ---
-  const focusCameraOn = (cameraPos, targetPos) => {
+  const focusCameraOn = (
+    cameraPos: [number, number, number],
+    targetPos: [number, number, number]
+  ) => {
     if (!cameraControls.current) return;
     cameraControls.current.setLookAt(
       cameraPos[0],
@@ -256,14 +276,12 @@ function App() {
     );
   };
 
-  // --- RESET CAMERA ---
   const resetCamera = () => {
     if (!cameraControls.current) return;
     cameraControls.current.setLookAt(20, 110, 7.4, 0, 0, 0, true);
     setActiveInfoPoint(null);
   };
 
-  // --- FULLSCREEN ---
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -274,7 +292,6 @@ function App() {
     }
   };
 
-  // --- KLWIATURA (WASD, QE, R, F, ESC) ---
   const MOVE_STEP = 0.7;
   const moveState = useRef({
     forward: false,
@@ -371,6 +388,7 @@ function App() {
     animateMove();
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
+
   if (!isAuthenticated) {
     return (
       <div

@@ -1,5 +1,4 @@
 // src/components/StartExploringButton.tsx
-import React from "react";
 
 interface StartExploringButtonProps {
   onClick?: () => void;

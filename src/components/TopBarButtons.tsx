@@ -1,5 +1,3 @@
-import React from "react";
-
 type TopBarButtonsProps = {
   objectUrl: string | null;
   showIFC: boolean;

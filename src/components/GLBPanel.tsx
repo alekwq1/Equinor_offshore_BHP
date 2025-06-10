@@ -1,5 +1,3 @@
-import React from "react";
-
 type GLBPanelProps = {
   showGLB1: boolean;
   setShowGLB1: (v: boolean) => void;

@@ -1,4 +1,3 @@
-import React from "react";
 import { InfoPoint, InfoPointData } from "./InfoPoint";
 
 type InfoPointListProps = {

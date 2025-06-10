@@ -1,5 +1,3 @@
-import React from "react";
-
 interface HelpModalProps {
   onClose: () => void; // Funkcja do zamykania okna
 }

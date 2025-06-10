@@ -1,5 +1,4 @@
 import { Html } from "@react-three/drei";
-import React from "react";
 
 export interface InfoPointData {
   id: string;

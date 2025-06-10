@@ -1,5 +1,3 @@
-import React, { useState } from "react";
-
 type HowToUseModalProps = {
   onClose: () => void;
 };

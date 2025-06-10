@@ -1,5 +1,4 @@
 // src/components/VideoModal.tsx
-import React from "react";
 
 interface VideoModalProps {
   onClose: () => void;
