@@ -27,9 +27,9 @@ export function GLBPanel(props: GLBPanelProps) {
     setShowGLB1,
     showGLB2,
     setShowGLB2,
-    glbUrl1,
+
     setGlbUrl1,
-    glbUrl2,
+
     setGlbUrl2,
     glbPos1,
     setGlbPos1,

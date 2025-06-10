@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect, useRef } from "react";
+import type React, { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, CameraControls } from "@react-three/drei";
 import { useLoader } from "@react-three/fiber";
@@ -97,7 +97,7 @@ const infoPoints: InfoPointData[] = [
     id: "Safety Board",
     position: [-50, 3, 65] as [number, number, number],
     label: "Safety Board",
-    icon: "🚧",
+    icon: "🟢",
     content: `• Evacuation assembly point 🚨
 • First aid kit 💊🩹
 • Fire extinguisher 🔥🧯
