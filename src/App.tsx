@@ -1,684 +1,921 @@
-// App.tsx
-import React, { Suspense, useState, useEffect } from "react";
-import {
-  Environment,
-  OrbitControls,
-  PerformanceMonitor,
-  Billboard,
-  Text,
-} from "@react-three/drei";
+import React, { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
+import { Environment, CameraControls } from "@react-three/drei";
+import * as THREE from "three";
+import { useLoader } from "@react-three/fiber";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+
+import IFCModel, { type IFCElementProperties } from "./components/IFCModel";
 import { Splat } from "./splat-object";
-import { Leva, useControls } from "leva";
-import VideoModal from "./components/VideoModal.tsx";
-import HelpModal from "./components/HelpModal.tsx";
-import SettingsModal from "./components/SettingsModal.tsx";
-import IFCModel, { type IFCElementProperties } from "./components/IFCModel.tsx";
-import { useSpring, animated } from "@react-spring/three";
+import HowToUseModal from "./components/HowToUseModal";
+import LoadingOverlay from "./components/LoadingOverlay";
+import IFCPropertiesPanel from "./components/IFCPropertiesPanel";
+import TopBarButtons from "./components/TopBarButtons";
+import CameraControlsButtons from "./components/CameraControlsButtons";
+import { InfoPointList } from "./components/InfoPointList";
 
-interface InfoPoint {
-  position: [number, number, number];
-  title: string;
-  content: string;
-  imageUrl?: string;
-  markerScale?: number;
-}
-
-interface InfoPointMarkerProps {
-  position: [number, number, number];
-  title: string;
-  onClick: () => void;
-  markerScale?: number;
-}
-
-const degToRad = (deg: number) => (deg * Math.PI) / 180;
 const isMobile = () => window.innerWidth < 768;
+const APP_PASSWORD = "12345678";
+const splatOption = {
+  name: "04.06.2024",
+  url: "/models/Equinor_02_06_2025.splat",
+  position: [0, 0, 0] as [number, number, number],
+  rotation: [0, 0, 0] as [number, number, number],
+  scale: [1, 1, 1] as [number, number, number],
+};
 
-const splatOptions = [
+const infoPoints = [
   {
-    name: "03.02.2025",
-    url: "https://huggingface.co/datasets/Alekso/Equinor_03_02_2025/resolve/main/Equinor_03_02_2025.splat",
-
-    position: [-2, -145.6, 127] as [number, number, number],
-    rotation: [degToRad(0), degToRad(8), degToRad(0)] as [
-      number,
-      number,
-      number
-    ],
-    scale: [34.1, 34.1, 34.1] as [number, number, number],
-    infoPoints: [
-      {
-        position: [-0.5, 5.9, 1.1],
-        title: "Construction Site Entrance",
-        content:
-          "The designated access point for workers, vehicles, and deliveries. Often secured with gates, checkpoints, and safety signage to control entry and ensure site regulations are followed.",
-        markerScale: 0.1,
-      },
-      {
-        position: [-1.2, 5.9, 0.5],
-        title: "Construction Site Office",
-        content:
-          "A central hub on a construction site for project management, coordination, and documentation. Used by site managers and engineers for planning, monitoring progress, and meetings. Equipped with essential tools and technology for efficient oversight",
-        markerScale: 0.1,
-      },
-    ] as InfoPoint[],
+    id: "AED on Site & Eye Wash Station",
+    position: [-62, 3, 40],
+    label: "AED on Site & Eye Wash Station",
+    icon: "💓",
+    content: `•	AED: 🏥⚡
+•	Eye wash: 👁️🚿
+`,
+    cameraPosition: [-15, 65, 80], // PRZYKŁADOWE WARTOŚCI
   },
   {
-    name: "29.01.2025",
-    url: "https://huggingface.co/Alekso/Equinor29012025/resolve/main/Equinor_29_01_2025.splat",
-    position: [-27, -33, 87] as [number, number, number],
-    rotation: [degToRad(-8), degToRad(-54), degToRad(-5)] as [
-      number,
-      number,
-      number
-    ],
-    scale: [23.8, 23.8, 23.8] as [number, number, number],
-    infoPoints: [
-      {
-        position: [3.2, 3.5, 1.9],
-        title: "Construction Site Entrance",
-        content:
-          "The designated access point for workers, vehicles, and deliveries. Often secured with gates, checkpoints, and safety signage to control entry and ensure site regulations are followed.",
-        markerScale: 0.2,
-      },
-      {
-        position: [2, 3.5, 2.2],
-        title: "Construction Site Office",
-        content:
-          "A central hub on a construction site for project management, coordination, and documentation. Used by site managers and engineers for planning, monitoring progress, and meetings. Equipped with essential tools and technology for efficient oversight",
-        markerScale: 0.2,
-      },
-    ] as InfoPoint[],
+    id: "H&S Board (Health & Safety)2",
+    position: [-7, 3, -35],
+    label: "H&S Board (Health & Safety)",
+    icon: "⛑️",
+    content: "🧯⛑️ (fire extinguisher + first aid kit)",
+    cameraPosition: [50, 50, -50], // PRZYKŁADOWE WARTOŚCI
   },
   {
-    name: "04.06.2024",
-    url: "https://huggingface.co/datasets/Alekso/Equinor_Base_20240604/resolve/main/EQUINOR_20240604.splat",
-    position: [0, 101, 0] as [number, number, number],
-    rotation: [0, 0, 0] as [number, number, number],
-    scale: [270, 270, 270] as [number, number, number],
-    infoPoints: [
-      {
-        position: [0, 3.2, 4.8],
-        title: "Cooling System",
-        content:
-          "Advanced liquid cooling infrastructure maintaining optimal temperatures. Utilizes geothermal energy for 40% increased efficiency.",
-        imageUrl:
-          "https://images.unsplash.com/photo-1631729371254-42c2892f0e6e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      },
-    ] as InfoPoint[],
+    id: "Pedestrian Communication Route",
+    position: [-38, 3, 20],
+    label: "Pedestrian Communication Route",
+    icon: "🚸",
+    content: "Pedestrian Communication Route",
+    cameraPosition: [0, 100, 35], // PRZYKŁADOWE WARTOŚCI
+  },
+  {
+    id: "No Entry – Seagull Nesting Area",
+    position: [-30, 3, 55],
+    label: "No Entry – Seagull Nesting Area",
+    icon: "🐦",
+    content: "⛔🐦 No Entry – Seagull Nesting Area",
+    cameraPosition: [-15, 65, 80], // PRZYKŁADOWE WARTOŚCI
+  },
+
+  {
+    id: "Emergency Board – Nearest Hospital Phone Number",
+    position: [-57, 3, 22],
+    label: "NEmergency Board – Nearest Hospital Phone Number",
+    icon: "📞",
+    content: "📞🏥 Emergency Board – Nearest Hospital Phone Number",
+  },
+  {
+    id: "No Entry – Fuel Storage Area",
+    position: [-50, 3, 0],
+    label: "No Entry – Fuel Storage Area",
+    icon: "⛽",
+    content: "⛔⛽ No Entry – Fuel Storage Area",
+    cameraPosition: [0, 100, 35], // PRZYKŁADOWE WARTOŚCI
+  },
+  {
+    id: "H&S Board (Health & Safety)",
+    position: [45, 3, -15],
+    label: "H&S Board (Health & Safety)",
+    icon: "⛑️",
+    content: `•	Lifebuoy with rope: 🛟
+       •	First aid kit + assigned personnel list: 💊📜`,
+    cameraPosition: [60, 150, 80], // PRZYKŁADOWE WARTOŚCI
+  },
+  {
+    id: "Safety Board",
+    position: [-50, 3, 65],
+    label: "Safety Board",
+    icon: "🚧",
+    content: `• Evacuation assembly point 🚨
+• First aid kit 💊🩹
+• Fire extinguisher 🔥🧯
+• Fire blanket 🧯🛡️
+`,
+    cameraPosition: [0, 80, 150], // PRZYKŁADOWE WARTOŚCI
+  },
+  {
+    id: "Construction Safety Mirror",
+    position: [-62, 10, 22],
+    label: "Construction Safety Mirror",
+    icon: "🔍",
+    content: `Construction Safety Mirror🔍👷‍♂️
+`,
+    cameraPosition: [0, 120, 35], // PRZYKŁADOWE WARTOŚCI
   },
 ];
 
-interface LoadingScreenProps {
-  progress: number;
+// Stały model z public/models/building.glb
+const PUBLIC_GLB = { label: "Building", url: "/models/building.glb" };
+
+// Pomocnicza funkcja (na górze pliku)
+const degToRad = (deg) => (deg * Math.PI) / 180;
+
+function GLBModel({
+  url,
+  position = [14, 1.6, -23],
+  rotation = [0, 160, 0], // <-- tutaj podajesz w stopniach "po ludzku"
+  scale = [1, 1, 1],
+  visible,
+}) {
+  // Przelicz rotation na radiany TUTAJ:
+  const radianRotation = rotation.map(degToRad);
+
+  // Ładujesz model
+  const gltf = useLoader(GLTFLoader, url);
+  if (!visible) return null;
+
+  return (
+    <primitive
+      object={gltf.scene}
+      dispose={null}
+      position={position}
+      rotation={radianRotation}
+      scale={scale}
+    />
+  );
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress }) => (
-  <div
-    className={`fixed inset-0 bg-black transition-opacity duration-1000 ${
-      progress < 100 ? "opacity-100" : "opacity-0 pointer-events-none"
-    }`}
-  >
-    <div className="absolute inset-0 flex flex-col items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold text-white mb-4">
-          EQ_LEBA_BASE
-        </h1>
-        <div className="w-64 h-2 bg-gray-700 rounded-full mx-auto">
-          <div
-            className="h-full bg-blue-600 rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-        <p className="text-white text-lg">{progress.toFixed(0)}% loaded</p>
-      </div>
-    </div>
-  </div>
-);
-
-const LandingPage: React.FC<{
-  onStart: () => void;
-  onOpenVideo: () => void;
-  onOpenHelp: () => void;
-  onOpenSettings: () => void;
-}> = ({ onStart, onOpenVideo, onOpenHelp, onOpenSettings }) => (
-  <div className="fixed inset-0 z-50">
-    <div className="absolute inset-0 bg-gradient-to-b from-black/90 to-black/30 pointer-events-none">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1580927752452-89d86da3fa0a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center opacity-90 pointer-events-none" />
-    </div>
-
-    <nav className="absolute top-0 left-0 z-50 flex items-start p-4 md:p-8">
-      <div className="flex gap-3 md:gap-6">
-        <button
-          onClick={onOpenVideo}
-          className="text-white hover:text-blue-400 transition-colors text-sm md:text-base"
-        >
-          Video
-        </button>
-        <button
-          onClick={onOpenHelp}
-          className="text-white hover:text-blue-400 transition-colors text-sm md:text-base"
-        >
-          Help
-        </button>
-        <button
-          onClick={onOpenSettings}
-          className="text-white hover:text-blue-400 transition-colors text-sm md:text-base"
-        >
-          Settings
-        </button>
-      </div>
-    </nav>
-
-    <div className="absolute inset-0 flex flex-col items-center text-center px-4 z-30">
-      <h1 className="text-2xl md:text-4xl font-bold text-white mt-8 md:leading-tight">
-        Discover the Future of Energy Infrastructure
-      </h1>
-      <div className="flex-grow flex items-center justify-center">
-        <button
-          onClick={onStart}
-          className="relative bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg transition-all duration-500 transform hover:scale-[1.03] hover:shadow-2xl"
-        >
-          Start Virtual Tour
-        </button>
-      </div>
-      <p className="text-gray-300 text-base md:text-lg mb-8 md:mb-16 -mt-2 md:-mt-4">
-        Immersive 3D exploration of Equinor's O&M Leba Base
-      </p>
-    </div>
-
-    <div className="absolute bottom-4 md:bottom-8 left-0 right-0 flex justify-center gap-4 md:gap-8 z-50">
-      {[
-        { label: "Technology", url: "https://www.equinor.com" },
-        { label: "Sustainability", url: "https://www.equinor.com" },
-        { label: "Innovation", url: "https://www.equinor.com" },
-        { label: "Contact", url: "https://www.equinor.com" },
-      ].map((button) => (
-        <a
-          key={button.label}
-          href={button.url}
-          className="text-gray-300 hover:text-white text-xs md:text-sm uppercase tracking-wider px-1.5 py-0.5"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {button.label}
-        </a>
-      ))}
-    </div>
-  </div>
-);
-
-const InfoPointMarker: React.FC<InfoPointMarkerProps> = ({
-  position,
-  title,
-  onClick,
-  markerScale = 1,
-}) => {
-  const [hovered, setHovered] = useState(false);
-
-  // Animacja powiększania i pulsowania
-  const { scale } = useSpring({
-    scale: hovered ? markerScale * 1.2 : markerScale,
-    config: { mass: 1, tension: 300, friction: 10 },
-  });
-
-  const { opacity } = useSpring({
-    opacity: hovered ? 1 : 0.8,
-    config: { mass: 1, tension: 300, friction: 10 },
-  });
-
-  return (
-    <Billboard position={position}>
-      <animated.group scale={scale}>
-        <mesh
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          onPointerOver={() => setHovered(true)}
-          onPointerOut={() => setHovered(false)}
-        >
-          <circleGeometry args={[0.8, 32]} />
-          <animated.meshStandardMaterial
-            color="#3b82f6"
-            transparent
-            opacity={opacity}
-          />
-        </mesh>
-        <Text
-          position={[0, 1.2, 0]}
-          fontSize={0.5}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {title}
-        </Text>
-      </animated.group>
-    </Billboard>
-  );
-};
-
-const InfoPointModal = ({
-  infoPoint,
-  onClose,
-}: {
-  infoPoint: InfoPoint | null;
-  onClose: () => void;
-}) => {
-  if (!infoPoint) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-xl max-w-2xl w-full overflow-hidden shadow-2xl transition-all duration-300 scale-95 hover:scale-100"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6 space-y-4">
-          <div className="flex justify-between items-start">
-            <h2 className="text-2xl font-bold text-gray-800">
-              {infoPoint.title}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-          {infoPoint.imageUrl && (
-            <img
-              src={infoPoint.imageUrl}
-              alt={infoPoint.title}
-              className="w-full h-48 object-cover rounded-lg"
-            />
-          )}
-          <p className="text-gray-600 leading-relaxed">{infoPoint.content}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 function App() {
-  const [isTransforming] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [isSplatLoading, setIsSplatLoading] = useState(false);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [loadedData, setLoadedData] = useState<(Blob | null)[]>(
-    splatOptions.map(() => null)
-  );
-  const [objectUrls, setObjectUrls] = useState<(string | null)[]>(
-    splatOptions.map(() => null)
-  );
-  const [activeSplatIndex, setActiveSplatIndex] = useState(0);
+  // --- STANY ---
+  const [showIFC, setShowIFC] = useState(false);
   const [ifcProperties, setIfcProperties] =
     useState<IFCElementProperties | null>(null);
-  const [showIFC, setShowIFC] = useState(true);
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAssistantEnlarged, setIsAssistantEnlarged] = useState(false);
-  const [assistantText, setAssistantText] = useState("");
-  const [selectedInfoPoint, setSelectedInfoPoint] = useState<InfoPoint | null>(
-    null
-  );
+  const [progress, setProgress] = useState(0);
+  const [showLoading, setShowLoading] = useState(true);
+  const [loadedData, setLoadedData] = useState<Blob | null>(null);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [activeInfoPoint, setActiveInfoPoint] = useState<string | null>(null);
+  const [showHowToUse, setShowHowToUse] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showInfoPoints, setShowInfoPoints] = useState(true);
+  // --- PASSWORD MODAL ---
+  const [password, setPassword] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPasswordError, setShowPasswordError] = useState(false);
+  // --- STAŁY PUBLICZNY GLB ---
+  const [showPublicGlb, setShowPublicGlb] = useState(false);
+  const [publicGlbPos, setPublicGlbPos] = useState<[number, number, number]>([
+    14, 1.8, -23,
+  ]);
+  const [publicGlbRot, setPublicGlbRot] = useState<[number, number, number]>([
+    0, 160, 0,
+  ]);
+  const [publicGlbScale, setPublicGlbScale] = useState<
+    [number, number, number]
+  >([1, 1, 1]);
 
-  const handleStart = () => {
-    setHasStarted(true);
-    if (isFirstLoad) {
-      setIsSplatLoading(true);
-      setTimeout(() => {
-        setIsSplatLoading(false);
-        setIsFirstLoad(false);
-      }, 2000);
+  // --- GLB upload użytkownika ---
+  const [userGlbUrl, setUserGlbUrl] = useState<string | null>(null);
+  const [showUserGlb, setShowUserGlb] = useState(true);
+  const [userGlbParamsOpen, setUserGlbParamsOpen] = useState(false);
+  const [userGlbPos, setUserGlbPos] = useState<[number, number, number]>([
+    0, 0, 0,
+  ]);
+  const [userGlbRot, setUserGlbRot] = useState<[number, number, number]>([
+    0, 0, 0,
+  ]);
+  const [userGlbScale, setUserGlbScale] = useState<[number, number, number]>([
+    1, 1, 1,
+  ]);
+
+  // --- SPLATY ---
+  const dpr = 2;
+  const maxSplats = isMobile() ? 5000000 : 10000000;
+  const [splats] = useState(maxSplats);
+  const effectiveSplats = Math.min(maxSplats, splats);
+
+  // --- KAMERA ---
+  const cameraControls = useRef<any>(null);
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    if (password === APP_PASSWORD) {
+      setIsAuthenticated(true);
+      setShowPasswordError(false);
+      setPassword(""); // czyść pole po sukcesie
+    } else {
+      setShowPasswordError(true);
+      setPassword("");
     }
   };
-
-  const { throttleDpr, maxDpr, throttleSplats, maxSplats } = useControls({
-    throttleDpr: { value: false },
-    maxDpr: {
-      value: isMobile()
-        ? Math.min(window.devicePixelRatio, 1.5)
-        : window.devicePixelRatio,
-    },
-    throttleSplats: { value: false },
-    maxSplats: { value: isMobile() ? 5000000 : 10000000 },
-    transformMode: {
-      options: { Przesuń: "translate", Obróć: "rotate", Skaluj: "scale" },
-      value: "translate",
-    },
-  });
-
-  const [factor, setFactor] = useState(1);
-  const dpr = Math.min(maxDpr, Math.round(0.5 + 1.5 * factor));
-  const effectiveDpr = throttleDpr ? Math.min(maxDpr, dpr) : maxDpr;
-  const [splats, setSplats] = useState(maxSplats);
-  const effectiveSplats = throttleSplats
-    ? Math.min(maxSplats, splats)
-    : maxSplats;
-
+  // --- ŁADOWANIE SPLAT ---
   useEffect(() => {
-    setIsSplatLoading(true);
-    const timer = setTimeout(() => setIsSplatLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, [activeSplatIndex]);
-
-  useEffect(() => {
-    const downloadFile = async (
-      url: string,
-      index: number,
-      trackProgress: boolean
-    ) => {
+    setShowLoading(true);
+    const downloadFile = async (url: string) => {
       try {
         const response = await fetch(url);
         const reader = response.body?.getReader();
         const contentLength = response.headers.get("content-length");
         let receivedLength = 0;
         const chunks: Uint8Array[] = [];
-
         if (!contentLength) return;
         const totalLength = parseInt(contentLength, 10);
-
         while (receivedLength < totalLength) {
           const { done, value } = (await reader?.read()) ?? {};
           if (done) break;
           if (value) {
             chunks.push(value);
             receivedLength += value.length;
-            if (trackProgress)
-              setProgress((receivedLength / totalLength) * 100);
+            setProgress(Math.round((receivedLength / totalLength) * 100));
           }
         }
-
         const blob = new Blob(chunks);
-        setLoadedData((prev) => {
-          const newData = [...prev];
-          newData[index] = blob;
-          return newData;
-        });
-
-        if (trackProgress) setProgress(100);
+        setLoadedData(blob);
+        setProgress(100);
+        setTimeout(() => setShowLoading(false), 1000);
       } catch (error) {
+        setShowLoading(false);
+        setProgress(100);
         console.error("Error loading splat:", error);
       }
     };
-
-    downloadFile(splatOptions[0].url, 0, true).then(() => {
-      splatOptions.slice(1).forEach((option, index) => {
-        downloadFile(option.url, index + 1, false);
-      });
-    });
+    downloadFile(splatOption.url);
   }, []);
 
   useEffect(() => {
-    const newUrls = loadedData.map((data) =>
-      data ? URL.createObjectURL(data) : null
-    );
-    setObjectUrls(newUrls);
-    return () => newUrls.forEach((url) => url && URL.revokeObjectURL(url));
+    if (loadedData) {
+      const url = URL.createObjectURL(loadedData);
+      setObjectUrl(url);
+      return () => url && URL.revokeObjectURL(url);
+    }
   }, [loadedData]);
 
-  return (
-    <>
-      <Leva oneLineLabels collapsed />
+  // --- FOCUS CAMERA ---
+  const focusCameraOn = (cameraPos, targetPos) => {
+    if (!cameraControls.current) return;
+    cameraControls.current.setLookAt(
+      cameraPos[0],
+      cameraPos[1],
+      cameraPos[2],
+      targetPos[0],
+      targetPos[1],
+      targetPos[2],
+      true
+    );
+  };
 
-      {hasStarted && (
-        <div
-          className={`fixed ${
-            isMobile() ? "left-2 top-2" : "left-4 top-4"
-          } z-50 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-2`}
-        >
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => setShowIFC(!showIFC)}
-              className={`px-3 py-1.5 text-sm rounded-md ${
-                showIFC ? "bg-green-600 text-white" : "bg-red-600 text-white"
-              }`}
-            >
-              {showIFC ? "Hide IFC" : "Show IFC"}
-            </button>
-            {splatOptions.map((option, index) => (
-              <button
-                key={option.url}
-                onClick={() => setActiveSplatIndex(index)}
-                className={`px-3 py-1.5 text-sm rounded-md ${
-                  activeSplatIndex === index
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100"
-                }`}
-              >
-                {option.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+  // --- RESET CAMERA ---
+  const resetCamera = () => {
+    if (!cameraControls.current) return;
+    cameraControls.current.setLookAt(20, 110, 7.4, 0, 0, 0, true);
+    setActiveInfoPoint(null);
+  };
 
-      <LoadingScreen progress={progress} />
+  // --- FULLSCREEN ---
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
 
-      {isSplatLoading && (
-        <div className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="relative mx-auto w-32 h-32">
-              <div className="absolute inset-0 border-4 border-yellow-500 rounded-full animate-spin [animation-duration:2s]"></div>
-              <div className="absolute inset-0 border-4 border-yellow-500 rounded-full animate-spin [animation-duration:3s] [animation-direction:reverse]"></div>
-              <div className="absolute inset-0 flex items-center justify-center text-4xl">
-                🚧
-              </div>
-            </div>
-            <p className="text-xl font-bold text-yellow-500 animate-pulse">
-              Loading the model...
-            </p>
-          </div>
-        </div>
-      )}
+  // --- KLWIATURA (WASD, QE, R, F, ESC) ---
+  const MOVE_STEP = 0.7;
+  const moveState = useRef({
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+  });
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const st = moveState.current;
+      switch (e.key.toLowerCase()) {
+        case "w":
+          st.forward = true;
+          break;
+        case "s":
+          st.backward = true;
+          break;
+        case "a":
+          st.left = true;
+          break;
+        case "d":
+          st.right = true;
+          break;
+        case "q":
+          st.up = true;
+          break;
+        case "e":
+          st.down = true;
+          break;
+        case "r":
+          resetCamera();
+          break;
+        case "f":
+          toggleFullscreen();
+          break;
+        case "escape":
+          if (isFullscreen) toggleFullscreen();
+          break;
+        default:
+          break;
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const st = moveState.current;
+      switch (e.key.toLowerCase()) {
+        case "w":
+          st.forward = false;
+          break;
+        case "s":
+          st.backward = false;
+          break;
+        case "a":
+          st.left = false;
+          break;
+        case "d":
+          st.right = false;
+          break;
+        case "q":
+          st.up = false;
+          break;
+        case "e":
+          st.down = false;
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    function animateMove() {
+      const controls = cameraControls.current;
+      if (controls) {
+        const st = moveState.current;
+        if (st.forward) controls.forward(MOVE_STEP, false);
+        if (st.backward) controls.forward(-MOVE_STEP, false);
+        if (st.left) controls.truck(-MOVE_STEP, 0, false);
+        if (st.right) controls.truck(MOVE_STEP, 0, false);
+        if (st.up) controls.truck(0, MOVE_STEP, false);
+        if (st.down) controls.truck(0, -MOVE_STEP, false);
+      }
+      animationFrameId = requestAnimationFrame(animateMove);
+    }
+    animateMove();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+  if (!isAuthenticated) {
+    return (
       <div
-        className={`fixed ${
-          isMobile() ? "bottom-2 right-2" : "bottom-4 right-4"
-        } z-[100] cursor-pointer`}
-        onClick={() => {
-          setIsAssistantEnlarged(!isAssistantEnlarged);
-          setAssistantText((prev) => (prev ? "" : "Demolition stage"));
+        style={{
+          minHeight: "100vh",
+          minWidth: "100vw",
+          background: "#dce2e8",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "fixed",
+          inset: 0,
+          zIndex: 10000,
         }}
       >
-        <div
-          className={`relative transition-transform duration-300 ${
-            isAssistantEnlarged ? "scale-150" : "scale-100"
-          }`}
+        <form
+          onSubmit={handlePasswordSubmit}
+          style={{
+            background: "#fff",
+            padding: "40px 28px",
+            borderRadius: 20,
+            boxShadow: "0 4px 32px #0002",
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            minWidth: 320,
+            alignItems: "center",
+          }}
         >
-          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white/90 backdrop-blur-sm shadow-lg ring-2 ring-blue-200">
-            <img
-              src="/assistant.png"
-              alt="Virtual Assistant"
-              className="w-full h-full rounded-full object-cover p-1 md:p-2"
-            />
-            <div className="absolute -right-1 -top-1 flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white animate-pulse">
-              ?
-            </div>
-          </div>
-        </div>
-
-        {assistantText && (
-          <div
-            className={`absolute right-0 ${
-              isMobile() ? "-top-40" : "-top-[200px]"
-            } w-72 md:w-80 p-3 md:p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg text-xs md:text-sm border border-blue-100`}
+          <span style={{ fontSize: 24, fontWeight: 700, color: "#1d3a55" }}>
+            🔒 Enter password
+          </span>
+          <input
+            type="password"
+            value={password}
+            autoFocus
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            style={{
+              fontSize: 18,
+              padding: "10px 16px",
+              borderRadius: 9,
+              border: "1px solid #ccd",
+              outline: showPasswordError ? "2px solid #e11d48" : "none",
+              width: "100%",
+              minWidth: 170,
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handlePasswordSubmit(e);
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              background: "#2190e3",
+              color: "white",
+              fontWeight: 600,
+              fontSize: 17,
+              borderRadius: 10,
+              border: "none",
+              padding: "10px 28px",
+              cursor: "pointer",
+              marginTop: 4,
+            }}
           >
-            {assistantText}
-            <div className="mt-2 space-y-1 md:space-y-2">
-              {[
-                "🚧 Safety first! Loading progress: " +
-                  progress.toFixed(0) +
-                  "%",
-                "🔹 Hard hats and high-visibility vests are mandatory",
-                "🔹 Do not enter the demolition zone without authorization",
-                "🔹 Keep a safe distance from machinery",
-                "🔹 Dispose debris in designated areas",
-              ].map((text, i) => (
-                <div key={i} className="text-gray-600">
-                  {text}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+            Log in
+          </button>
+          {showPasswordError && (
+            <span style={{ color: "#e11d48", fontWeight: 500 }}>
+              Wrong password. Try again.
+            </span>
+          )}
+        </form>
+      </div>
+    );
+  }
+
+  // --- RENDER ---
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        minWidth: "100vw",
+        background: "#dce2e8",
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+      }}
+    >
+      {/* LOADING OVERLAY */}
+      {showLoading && <LoadingOverlay progress={progress} />}
+
+      {/* How to use (lewy dolny róg) */}
+      <div
+        style={{
+          position: "fixed",
+          left: 32,
+          bottom: 26,
+          zIndex: 40,
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
+        <button
+          style={{
+            background: "rgba(33,140,227,0.90)",
+            borderRadius: "12px",
+            color: "white",
+            fontWeight: 600,
+            fontSize: 12,
+            padding: "10px 30px",
+            border: "none",
+            boxShadow: "0 2px 8px rgba(33,140,227,0.08)",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            letterSpacing: 0.3,
+          }}
+          onClick={() => setShowHowToUse(true)}
+        >
+          ℹ️ How to use?
+        </button>
+        <button
+          style={{
+            background: showInfoPoints
+              ? "rgba(33,140,227,0.90)"
+              : "rgba(150, 150, 150, 0.6)",
+            borderRadius: "12px",
+            color: "white",
+            fontWeight: 600,
+            fontSize: 12,
+            padding: "10px 24px",
+            border: "none",
+            cursor: "pointer",
+          }}
+          onClick={() => setShowInfoPoints((v) => !v)}
+        >
+          {showInfoPoints ? "❌Hide info points" : "👁️‍🗨️Show info points"}
+        </button>
+      </div>
+      {showHowToUse && <HowToUseModal onClose={() => setShowHowToUse(false)} />}
+
+      {/* Przyciski kamera/fullscreen (prawy dolny róg) */}
+      <CameraControlsButtons
+        resetCamera={resetCamera}
+        isFullscreen={isFullscreen}
+        toggleFullscreen={toggleFullscreen}
+      />
+
+      {/* LINK COMPARISON – prawy górny róg */}
+      <div
+        style={{
+          position: "fixed",
+          right: 32,
+          top: 22,
+          zIndex: 50,
+        }}
+      >
+        <a
+          href="https://equinorleba.netlify.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: "#2190e3",
+            color: "white",
+            fontWeight: 600,
+            fontSize: 14,
+            borderRadius: 11,
+            boxShadow: "0 2px 8px rgba(33,140,227,0.08)",
+            padding: "5px 28px",
+            textDecoration: "none",
+          }}
+        >
+          ↔️ Progress comparison slider
+        </a>
       </div>
 
-      {progress >= 100 && !hasStarted && (
-        <LandingPage
-          onStart={handleStart}
-          onOpenVideo={() => setIsVideoOpen(true)}
-          onOpenHelp={() => setIsHelpOpen(true)}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+      {/* IFC + GLB icons/panels (lewy górny róg) */}
+      {/* --- GÓRNY LEWY RÓG: przyciski w jednej linii --- */}
+      <div
+        style={{
+          position: "fixed",
+          left: isMobile() ? 8 : 24,
+          top: isMobile() ? 8 : 24,
+          zIndex: 51,
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+          flexDirection: "row",
+        }}
+      >
+        {/* Przycisk IFC */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <button
+            title={showIFC ? "Hide IFC model" : "Show IFC model"}
+            style={{
+              background: showIFC ? "#0ea5e9" : "#ef4444",
+              color: "#fff",
+              border: "none",
+              borderRadius: "50%",
+              width: 45,
+              height: 45,
+              fontSize: 27,
+              boxShadow: "0 2px 8px rgba(33,140,227,0.16)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+            onClick={() => setShowIFC((v) => !v)}
+          >
+            🏗️
+          </button>
+          <span
+            style={{
+              fontSize: 13,
+              color: "#1d3a55",
+              marginTop: 4,
+              fontWeight: 500,
+              letterSpacing: 0.3,
+              userSelect: "none",
+            }}
+          >
+            IFC
+          </span>
+        </div>
+
+        {/* Przycisk GLB */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <button
+            title={
+              showPublicGlb ? "Hide building model" : "Show building model"
+            }
+            style={{
+              background: showPublicGlb ? "#16a34a" : "#ef4444",
+              color: "#fff",
+              border: "none",
+              borderRadius: "50%",
+              width: 45,
+              height: 45,
+              fontSize: 27,
+              boxShadow: "0 2px 8px rgba(33,140,227,0.16)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+            onClick={() => setShowPublicGlb((v) => !v)}
+          >
+            🏢
+          </button>
+          <span
+            style={{
+              fontSize: 13,
+              color: "#1d3a55",
+              marginTop: 4,
+              fontWeight: 500,
+              letterSpacing: 0.3,
+              userSelect: "none",
+            }}
+          >
+            GLB
+          </span>
+        </div>
+
+        {/* Przycisk UPLOAD GLB */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <button
+            title="Upload GLB"
+            style={{
+              background: "#2190e3",
+              color: "#fff",
+              border: "none",
+              borderRadius: "50%",
+              width: 45,
+              height: 45,
+              fontSize: 27,
+              boxShadow: "0 2px 8px rgba(33,140,227,0.16)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+            onClick={() => setUserGlbParamsOpen((o) => !o)}
+          >
+            📦
+          </button>
+          <span
+            style={{
+              fontSize: 13,
+              color: "#1d3a55",
+              marginTop: 4,
+              fontWeight: 500,
+              letterSpacing: 0.3,
+              userSelect: "none",
+            }}
+          >
+            Upload
+          </span>
+        </div>
+      </div>
+
+      {/* --- PANEL UPLOADU GLB (poza górną linią przycisków!) --- */}
+      {userGlbParamsOpen && (
+        <div
+          style={{
+            position: "fixed",
+            left: isMobile() ? 8 : 24,
+            top: isMobile() ? 70 : 90, // pod paskiem z przyciskami
+            zIndex: 55,
+            background: "#f5faff",
+            borderRadius: 10,
+            padding: "14px 22px",
+            boxShadow: "0 2px 12px #bbb7",
+            display: "flex",
+            flexDirection: "column",
+            gap: 9,
+            minWidth: 220,
+          }}
+        >
+          <input
+            type="file"
+            accept=".glb"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUserGlbUrl(URL.createObjectURL(file));
+              setShowUserGlb(true);
+              setUserGlbPos([0, 0, 0]);
+              setUserGlbRot([0, 0, 0]);
+              setUserGlbScale([1, 1, 1]);
+            }}
+            style={{
+              width: 180,
+              background: "#fff",
+              border: "1px solid #bbb",
+              borderRadius: 8,
+              fontSize: 15,
+              marginBottom: 2,
+            }}
+          />
+          {userGlbUrl && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  onClick={() => setShowUserGlb((v) => !v)}
+                  style={{
+                    background: showUserGlb ? "#16a34a" : "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "4px 14px",
+                    fontWeight: 600,
+                    fontSize: 15,
+                    cursor: "pointer",
+                  }}
+                >
+                  {showUserGlb ? "Hide" : "Show"}
+                </button>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 13, color: "#2261c5" }}>XYZ:</span>
+                {[0, 1, 2].map((ax) => (
+                  <input
+                    key={ax}
+                    type="number"
+                    value={userGlbPos[ax]}
+                    step={0.1}
+                    style={{ width: 36, marginLeft: 2 }}
+                    onChange={(e) =>
+                      setUserGlbPos(
+                        userGlbPos.map((v, i) =>
+                          i === ax ? parseFloat(e.target.value) : v
+                        ) as [number, number, number]
+                      )
+                    }
+                    title={`Position ${["X", "Y", "Z"][ax]}`}
+                  />
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 13, color: "#2261c5" }}>Rot:</span>
+                {[0, 1, 2].map((ax) => (
+                  <input
+                    key={ax}
+                    type="number"
+                    value={
+                      Math.round(((userGlbRot[ax] * 180) / Math.PI) * 100) / 100
+                    }
+                    step={1}
+                    min={-180}
+                    max={180}
+                    style={{ width: 36, marginLeft: 2 }}
+                    onChange={(e) =>
+                      setUserGlbRot(
+                        userGlbRot.map((v, i) =>
+                          i === ax
+                            ? (parseFloat(e.target.value) * Math.PI) / 180
+                            : v
+                        ) as [number, number, number]
+                      )
+                    }
+                    title={`Rotation ${["X", "Y", "Z"][ax]} (deg)`}
+                  />
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 13, color: "#2261c5" }}>Scale:</span>
+                {[0, 1, 2].map((ax) => (
+                  <input
+                    key={ax}
+                    type="number"
+                    value={userGlbScale[ax]}
+                    step={0.01}
+                    min={0.01}
+                    max={99}
+                    style={{ width: 36, marginLeft: 2 }}
+                    onChange={(e) =>
+                      setUserGlbScale(
+                        userGlbScale.map((v, i) =>
+                          i === ax ? parseFloat(e.target.value) : v
+                        ) as [number, number, number]
+                      )
+                    }
+                    title={`Scale ${["X", "Y", "Z"][ax]}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* IFC PROPERTIES */}
+      {showIFC && ifcProperties && (
+        <IFCPropertiesPanel
+          properties={ifcProperties}
+          onClose={() => setIfcProperties(null)}
         />
       )}
 
-      {isVideoOpen && (
-        <VideoModal
-          onClose={() => setIsVideoOpen(false)}
-          youtubeUrl="https://www.youtube.com/embed/PrSc-xK2gLE"
-        />
-      )}
-      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
-      {isSettingsOpen && (
-        <SettingsModal onClose={() => setIsSettingsOpen(false)} />
-      )}
-
-      {hasStarted && (
+      {/* CANVAS */}
+      {objectUrl && (
         <Canvas
           className="h-full w-full touch-action-none"
           gl={{ antialias: false }}
-          dpr={effectiveDpr}
+          dpr={dpr}
           camera={{
-            position: isMobile() ? [180, 180, 40] : [150, 150, 32],
+            position: isMobile() ? [180, 180, 40] : [100, 150, 36.5],
             fov: isMobile() ? 35 : 60,
             near: 0.01,
             far: 500000,
           }}
+          style={{
+            width: "100vw",
+            height: "100vh",
+            background: "transparent",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            zIndex: 2,
+          }}
         >
           <ambientLight intensity={0.8} />
-          <PerformanceMonitor
-            onIncline={({ factor }) => {
-              setFactor(factor);
-              setSplats(
-                Math.min(
-                  maxSplats,
-                  Math.round((0.9 + 0.2 * factor) * effectiveSplats)
-                )
-              );
-            }}
-            onDecline={({ factor }) => {
-              setFactor(factor);
-              setSplats(
-                Math.min(
-                  maxSplats,
-                  Math.round((0.9 + 0.2 * factor) * effectiveSplats)
-                )
-              );
-            }}
-          >
-            <OrbitControls
-              enabled={!isTransforming}
-              enableDamping={true}
-              dampingFactor={0.05}
-              target={[0, 55, 95]}
-              minDistance={isMobile() ? 50 : 30}
-              maxDistance={isMobile() ? 200 : 120}
-              minPolarAngle={Math.PI / 27}
-              maxPolarAngle={Math.PI / 4.2}
-              rotateSpeed={isMobile() ? 0.4 : 0.6}
-            />
-            <Suspense fallback={null}>
-              {splatOptions.map(
-                (option, index) =>
-                  objectUrls[index] &&
-                  activeSplatIndex === index && (
-                    <group
-                      key={option.url}
-                      position={option.position}
-                      rotation={option.rotation}
-                      scale={option.scale}
-                    >
-                      <Splat
-                        url={objectUrls[index]!}
-                        maxSplats={effectiveSplats}
-                      />
-                      {option.infoPoints?.map((point, i) => (
-                        <InfoPointMarker
-                          key={i}
-                          position={point.position}
-                          title={point.title}
-                          onClick={() => setSelectedInfoPoint(point)}
-                          markerScale={point.markerScale} // Przekazanie skali
-                        />
-                      ))}
-                    </group>
-                  )
+          <CameraControls ref={cameraControls} makeDefault />
+          <Suspense fallback={null}>
+            <group
+              position={splatOption.position}
+              rotation={splatOption.rotation}
+              scale={splatOption.scale}
+            >
+              {/* SPLAT MODEL */}
+              <Splat url={objectUrl} maxSplats={effectiveSplats} />
+              {/* INFOPOINTY */}
+              {showInfoPoints && (
+                <InfoPointList
+                  points={infoPoints}
+                  activeId={activeInfoPoint}
+                  onSelect={(id) => {
+                    setActiveInfoPoint(id === activeInfoPoint ? null : id);
+                    const point = infoPoints.find((p) => p.id === id);
+                    if (point && point.cameraPosition)
+                      focusCameraOn(point.cameraPosition, point.position);
+                  }}
+                  onClose={() => setActiveInfoPoint(null)}
+                />
               )}
+            </group>
+            {/* IFC */}
+            {showIFC && (
               <IFCModel
                 onPropertiesSelected={setIfcProperties}
-                visible={showIFC}
                 rotationY={95}
               />
-              {/*
-              <mesh
-                scale={[68.76, 68.76, 68.76]}
-                position={[17.5, 20, 133.5]} // Pozycja
-                rotation={[degToRad(0), degToRad(4.5), degToRad(0)]} // Rotacja
-              >
-                <boxGeometry args={[1, 1, 1]} />
-                <meshStandardMaterial
-                  color="orange"
-                  transparent
-                  opacity={0.7}
+            )}
+            {/* GLB z public/models */}
+            {showPublicGlb && (
+              <Suspense fallback={null}>
+                <GLBModel
+                  url={PUBLIC_GLB.url}
+                  position={publicGlbPos}
+                  rotation={publicGlbRot}
+                  scale={publicGlbScale}
+                  visible={showPublicGlb}
                 />
-              </mesh>
-*/}
-              <Environment preset="city" />
-            </Suspense>
-          </PerformanceMonitor>
+              </Suspense>
+            )}
+            {/* GLB z uploadu */}
+            {showUserGlb && userGlbUrl && (
+              <Suspense fallback={null}>
+                <GLBModel
+                  url={userGlbUrl}
+                  position={userGlbPos}
+                  rotation={userGlbRot}
+                  scale={userGlbScale}
+                  visible={showUserGlb}
+                />
+              </Suspense>
+            )}
+            <Environment preset="city" />
+          </Suspense>
         </Canvas>
       )}
-
-      {showIFC && ifcProperties && (
-        <div className="fixed top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg max-w-xs">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-bold text-lg">IFC Properties</h2>
-            <button
-              onClick={() => setIfcProperties(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-2 text-sm max-h-96 overflow-y-auto">
-            {Object.entries(ifcProperties).map(([key, value]) => {
-              // Dostosuj strukturę wartości do Twojego API IFC
-              const displayValue = value?.value ?? JSON.stringify(value);
-              return (
-                <div key={key} className="break-words">
-                  <span className="font-medium">{key}:</span>{" "}
-                  {String(displayValue)}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {selectedInfoPoint && (
-        <InfoPointModal
-          infoPoint={selectedInfoPoint}
-          onClose={() => setSelectedInfoPoint(null)}
-        />
-      )}
-    </>
+    </div>
   );
 }
 

@@ -51,8 +51,8 @@ const IFCModel: React.FC<IFCProps> = ({
 
         if (model instanceof THREE.Object3D) {
           model.scale.set(1, 1, 1);
-          model.position.set(18.5, 50.4, 120);
-          model.rotation.y = THREE.MathUtils.degToRad(rotationY);
+          model.position.set(1.2, 1.8, 33.8);
+          model.rotation.y = THREE.MathUtils.degToRad(69.9);
           scene.add(model);
           modelRef.current = model;
         } else {
