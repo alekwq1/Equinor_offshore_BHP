@@ -1,5 +1,3 @@
-import React from "react";
-
 type CameraControlsButtonsProps = {
   resetCamera: () => void;
   isFullscreen: boolean;
