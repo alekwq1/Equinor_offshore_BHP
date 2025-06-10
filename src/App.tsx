@@ -111,7 +111,7 @@ const infoPoints = [
 const PUBLIC_GLB = { label: "Building", url: "/models/building.glb" };
 
 // Pomocnicza funkcja (na górze pliku)
-const degToRad = (deg) => (deg * Math.PI) / 180;
+const degToRad = (deg: number): number => (deg * Math.PI) / 180;
 
 function GLBModel({
   url,
